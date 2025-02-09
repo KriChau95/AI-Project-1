@@ -1,8 +1,8 @@
 import random
 import numpy as np
+import heapq
 
-
-#np.random.seed(23) #23 for lebron
+random.seed(23) #23 for lebron
 
 
 def initShip(d):
@@ -91,7 +91,54 @@ def createShip(ship):
 def bot1(ship,open,closed,items):
     #find path from bot to goal
     bot_r,bot_c,fire_r,fire_c,button_r,button_c = items
+    d = len(ship)
+
+    def heuristic(cell1):
+        cell2 = (button_r,button_c)
+        return abs(cell1[0] - cell2[0]) + abs(cell1[1]-cell2[1])
+
+    directions = [[0,1],[1,0],[-1,0],[0,-1]]
+
+    heap = []
+    heapq.heappush(heap, (0,bot_r,bot_c,))
+    prev = {}
+    totalCost = {}
+    prev[(bot_r,bot_c)] = None
+    totalCost[(bot_r, bot_c)] = 0
+
+    print("running a*", heap, prev)
+    sol = None
+    visited = set()
+    while heap:
+        cost, r, c =  heapq.heappop(heap)
+        if (r,c) == (button_r,button_c):
+            sol = (r,c)
+            break
+        for dr,dc in directions:
+            row = r + dr
+            col = c + dc
+            if 0<=row<d and 0<=col<d and (ship[row][col] != 0 and ship[row][col] != -1 )and (row,col) not in visited:
+                estCost = cost + heuristic((row,col))
+                heapq.heappush(heap, (estCost,row,col))
+                prev[(row,col)] = (r,c)
+                visited.add((r,c))
+
+    if sol != None:
+        curr = sol
+        path = []
+        print(prev, curr)
+
+        while curr != None:
+            path.append(curr)
+            curr = prev[curr]
+        path.reverse()
+        print("final path ",path)
+  
+
     
+
+
+
     return
 
 
