@@ -60,6 +60,25 @@ def createShip(ship):
                 else:
                     singleNeighbor.add((r,c))
 
+    deadends = dict()
+
+    for r in range(d):
+        for c in range(d):
+            if ship[r][c] == 1:
+                count = 0
+                closedN = []
+                for dr,dc in directions:
+                    tr = r+dr 
+                    tc = c+dc
+                    if 0<=tr<d and 0<=tc<d:
+                        if ship[tr][tc] == 1:
+                            count+=1
+                        elif ship[tr][tc] == 0:
+                            closedN.append((tr,tc))
+                if count == 1:
+                    deadends[(r,c)] = closedN
+
+    print("dead ends of ship ", deadends)
 
     open = set()
     closed = set()
@@ -70,9 +89,19 @@ def createShip(ship):
             elif ship[r][c] == 0:
                 closed.add((r,c))
 
+    for i in range(len(deadends)//2):
+        listNeighbors = deadends.pop(random.choice(list(deadends.keys())))
+        r,c = random.choice(listNeighbors)
+        ship[r][c] = 1
+    
+
+    
+    
+    
+    print("dead ends after popping ", deadends)
+
     bot_r,bot_c = (random.choice(list(open)))
     open.remove((bot_r,bot_c))
-    
     fire_r,fire_c = (random.choice(list(open)))
     open.remove((fire_r,fire_c))
 
@@ -82,9 +111,9 @@ def createShip(ship):
     ship[bot_r][bot_c] = 2
     ship[fire_r][fire_c] = -1
     ship[button_r][button_c] = -2
-    print("bot1 initialized ship ")
-    for row in ship:
-        print(row)
+    # print("bot1 initialized ship ")
+    # for row in ship:
+    #     print(row)
 
     items = [bot_r,bot_c,fire_r,fire_c,button_r,button_c]
     return ship, open, closed, items
@@ -107,7 +136,7 @@ def bot1(ship,open,closed,items):
     prev[(bot_r,bot_c)] = None
     totalCost[(bot_r, bot_c)] = 0
 
-    print("running a*", heap, prev)
+    # print("running a*", heap, prev)
     sol = None
     visited = set()
     while heap:
