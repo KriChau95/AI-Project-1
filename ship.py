@@ -3,6 +3,7 @@ import numpy as np
 import heapq
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors 
+from collections import deque
 
 random.seed(23) # 23 for lebron
 
@@ -94,9 +95,6 @@ def createShip(ship):
         r,c = random.choice(listNeighbors)
         ship[r][c] = 1
     
-
-    
-    
     
     print("dead ends after popping ", deadends)
 
@@ -111,16 +109,20 @@ def createShip(ship):
     ship[bot_r][bot_c] = 2
     ship[fire_r][fire_c] = -1
     ship[button_r][button_c] = -2
-    # print("bot1 initialized ship ")
-    # for row in ship:
-    #     print(row)
 
-    items = [bot_r,bot_c,fire_r,fire_c,button_r,button_c]
+    fire_set = set()
+
+    for dr, dc in directions:
+        nr, nc = fire_r + dr, fire_c + dc
+        if 0 <= nr < d and 0 <= nc < d and ship[nr][nc] == 1:
+            fire_set.add((nr,nc))
+
+    items = [bot_r,bot_c,fire_r,fire_c,button_r,button_c, fire_set]
     return ship, open, closed, items
 
-def bot1(ship,open,closed,items):
+def bot1(ship,open,closed,items, q):
     #find path from bot to goal
-    bot_r,bot_c,fire_r,fire_c,button_r,button_c = items
+    bot_r,bot_c,fire_r,fire_c,button_r,button_c, fire_set = items
     d = len(ship)
 
     def heuristic(cell1):
@@ -130,7 +132,7 @@ def bot1(ship,open,closed,items):
     directions = [[0,1],[1,0],[-1,0],[0,-1]]
 
     heap = []
-    heapq.heappush(heap, (0,bot_r,bot_c,))
+    heapq.heappush(heap, (0,bot_r,bot_c))
     prev = {}
     totalCost = {}
     prev[(bot_r,bot_c)] = None
@@ -163,35 +165,37 @@ def bot1(ship,open,closed,items):
             curr = prev[curr]
         path.reverse()
         print("final path ",path)
-
-    return
-
-
-def printShip(ship):
-    map = {
-        0 : '#',
-        1 : ' ',
-        -1 : 'F',
-        2 : '@',
-        -2 : 'B'
-    }
-
-    d = len(ship)
-
-    for i in range(d):
-        for j in range(d):
-            print(map[ship[i][j]], end = " ")
-        print()
-
+    
+    
+    fire_q = deque()
+    for i in fire_set:
+        deque.append(i)
+    
+    count = 1
+    while deque:
+        curr_r, curr_c = path[t]
+        for _ in list(fire_set):
+            row, col = fire_set.pop()
+            k = 0
+            for dr, dc in directions:
+                nr, nc = row + dr, col + dc
+                if 0 <= nr < d and 0 <= nc < d and ship[nr][nc] == -1:
+                    k += 1
+            # prob_f = 1 - (1-q) ** k
+            # result = random.choices(["fire", "no fire"], weights=[prob_f, 1- prob_f])[0]
 
 
-def visualize_ship(ship):
+
+    return path
+
+
+def visualize_ship(ship, path):
     color_map = {
         0: 'black',  # Wall
         1: 'white',  # Empty space
-        -1: 'red',   # F
-        2: 'blue',   # @
-        -2: 'green'  # B
+        -1: 'red',   # Fire
+        2: 'blue',   # Bot
+        -2: 'green'  # Button
     }
     
     d = len(ship)
@@ -201,6 +205,10 @@ def visualize_ship(ship):
         for j in range(d):
             img[i, j] = mcolors.to_rgb(color_map[ship[i][j]])  # Use correct function
     
+    for i in range(1,len(path)-1):
+        r, c = path[i]
+        img [r, c] = mcolors.to_rgb('yellow')
+
     plt.imshow(img, interpolation='nearest')
     plt.xticks([])
     plt.yticks([])
@@ -210,9 +218,9 @@ def visualize_ship(ship):
 
 def main():
     ship, open, closed, items = initShip(40)
-
-    #bot1(ship.copy(),open,closed,items)
-    visualize_ship(ship)
+    q = 0.1
+    path = bot1(ship.copy(),open,closed,items, q)
+    visualize_ship(ship, path)
     
 
 if __name__ == "__main__":
