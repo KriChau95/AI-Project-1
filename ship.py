@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors 
 from collections import deque
 
-random.seed(23) # 23 for lebron
+random.seed(9) # 23 for lebron
 
 def initShip(d):
         
@@ -20,8 +20,8 @@ def initShip(d):
     # initialize ship to size dimension
     ship = [[0] * dimension for t in range(dimension)] 
 
-    for row in ship:
-        print(row)
+    #for row in ship:
+        #print(row)
     
     return createShip(ship)
 
@@ -44,9 +44,9 @@ def createShip(ship):
             singleNeighbor.add((r,c))
 
     while singleNeighbor:
-        print(singleNeighbor)
-        for row in ship:
-            print(row)
+        #print(singleNeighbor)
+        #for row in ship:
+            #print(row)
         rc = (random.choice(list(singleNeighbor)))
         singleNeighbor.remove(rc)
         row, col = rc
@@ -79,7 +79,7 @@ def createShip(ship):
                 if count == 1:
                     deadends[(r,c)] = closedN
 
-    print("dead ends of ship ", deadends)
+    #print("dead ends of ship ", deadends)
 
     open = set()
     closed = set()
@@ -96,7 +96,7 @@ def createShip(ship):
         ship[r][c] = 1
     
     
-    print("dead ends after popping ", deadends)
+    #print("dead ends after popping ", deadends)
 
     bot_r,bot_c = (random.choice(list(open)))
     open.remove((bot_r,bot_c))
@@ -138,7 +138,7 @@ def bot1(ship,open,closed,items, q):
     prev[(bot_r,bot_c)] = None
     totalCost[(bot_r, bot_c)] = 0
 
-    # print("running a*", heap, prev)
+    # #print("running a*", heap, prev)
     sol = None
     visited = set()
     while heap:
@@ -158,36 +158,189 @@ def bot1(ship,open,closed,items, q):
     if sol != None:
         curr = sol
         path = []
-        print(prev, curr)
+        #print(prev, curr)
 
         while curr != None:
             path.append(curr)
             curr = prev[curr]
-        path.reverse()
-        print("final path ",path)
+        
+        #print("final path ",path)
     
-    
+    inQueue = set()
+
     fire_q = deque()
     for i in fire_set:
-        deque.append(i)
-    
-    count = 1
-    while deque:
-        curr_r, curr_c = path[t]
-        for _ in list(fire_set):
-            row, col = fire_set.pop()
+        fire_q.append(i)
+        inQueue.add(i)
+
+    t = 1
+    res = "success"
+    fire = ship
+
+    while fire_q and t<len(path):
+
+        tr, tc = path[t]
+        if fire[tr][tc] == -1:
+            res = "failure"
+            #print(res)
+            break
+
+        for x in range(len(fire_q)):
+            row, col = fire_q.popleft()
+
+            if (row, col) in inQueue:  
+                inQueue.remove((row, col))
+
             k = 0
             for dr, dc in directions:
                 nr, nc = row + dr, col + dc
-                if 0 <= nr < d and 0 <= nc < d and ship[nr][nc] == -1:
+                if 0 <= nr < d and 0 <= nc < d and fire[nr][nc] == -1:
                     k += 1
-            # prob_f = 1 - (1-q) ** k
-            # result = random.choices(["fire", "no fire"], weights=[prob_f, 1- prob_f])[0]
+            
+            # #print("k", k)
+            prob_f = (1 - ((1-q) ** k))
+            
+            random.seed()
+            result = random.choices(["fire", "no fire"], weights=[prob_f, 1-prob_f])[0]
+            #print("result ", result, "iteration ", t)
+            
+            if result=="fire":
+                fire[row][col] = -1
+                for dr, dc in directions:
+                    nr, nc = row + dr, col + dc
+                    if 0 <= nr < d and 0 <= nc < d and (fire[nr][nc] != 0 and fire[nr][nc] != -1) and (nr,nc) not in inQueue:
+                        fire_q.append((nr,nc))
+                        inQueue.add((nr,nc))
+            else:
+                fire_q.append((row,col))
+                inQueue.add((row,col))
+
+        visualize_ship(fire,path[0:t+1])
+        #print("fireq, ", fire_q)
+        t+=1
+    #print(res)
+    return fire, path
+
+
+def bot2(ship,open,closed,items, q):
+    #find path from bot to goal
+    bot_r,bot_c,fire_r,fire_c,button_r,button_c, fire_set = items
+    d = len(ship)
+    directions = [[0,1],[1,0],[-1,0],[0,-1]]
+
+    def heuristic(cell1):
+        cell2 = (button_r,button_c)
+        return abs(cell1[0] - cell2[0]) + abs(cell1[1]-cell2[1])
+
+
+    def astar(bot_r,bot_c):
+        heap = []
+        heapq.heappush(heap, (0,bot_r,bot_c))
+        prev = {}
+        totalCost = {}
+        prev[(bot_r,bot_c)] = None
+        totalCost[(bot_r, bot_c)] = 0
+
+        # #print("running a*", heap, prev)
+        sol = None
+        visited = set()
+        while heap:
+            cost, r, c =  heapq.heappop(heap)
+            if (r,c) == (button_r,button_c):
+                sol = (r,c)
+                break
+            for dr,dc in directions:
+                row = r + dr
+                col = c + dc
+                if 0<=row<d and 0<=col<d and (ship[row][col] != 0 and ship[row][col] != -1) and (row,col) not in visited:
+                    estCost = cost + heuristic((row,col))
+                    heapq.heappush(heap, (estCost,row,col))
+                    prev[(row,col)] = (r,c)
+                    visited.add((r,c))
+
+        if sol != None:
+            curr = sol
+            path = []
+            # #print(prev, curr)
+
+            while curr != None:
+                path.append(curr)
+                curr = prev[curr]
+            
+        return sol, path
+    
 
 
 
-    return path
 
+    inQueue = set()
+    fire_q = deque()
+
+    for i in fire_set:
+        fire_q.append(i)
+        inQueue.add(i)
+
+    t = 1
+    res = "success"
+    fire = ship
+    tr, tc = bot_r,bot_c
+
+    while fire_q:
+        sol, path = astar(tr,tc)
+
+        if (tr, tc) == (button_r, button_c):
+            break
+
+        if sol == None:
+            res = "failure"
+            break
+    
+        if fire[tr][tc] == -1:
+            res = "failure"
+            #print(res)
+            break
+
+        for x in range(len(fire_q)):
+            row, col = fire_q.popleft()
+
+            if (row, col) in inQueue:  
+                inQueue.remove((row, col))
+            k = 0
+            for dr, dc in directions:
+                nr, nc = row + dr, col + dc
+                if 0 <= nr < d and 0 <= nc < d and fire[nr][nc] == -1:
+                    k += 1
+            
+            # #print("k", k)
+            prob_f = (1 - ((1-q) ** k))
+            
+            random.seed()
+            result = random.choices(["fire", "no fire"], weights=[prob_f, 1-prob_f])[0]
+            #print("result ", result, "iteration ", t)
+            if result=="fire":
+                fire[row][col] = -1
+                for dr, dc in directions:
+                    nr, nc = row + dr, col + dc
+                    if 0 <= nr < d and 0 <= nc < d and (fire[nr][nc] != 0 and fire[nr][nc] != -1) and (nr,nc) not in inQueue:
+                        fire_q.append((nr,nc))
+                        inQueue.add((nr,nc))
+            else:
+                fire_q.append((row,col))
+                inQueue.add((row,col))
+
+        visualize_ship(fire,path[0:t+1])
+        #print("fireq, ", fire_q)
+        t+=1
+        
+        tr,tc = path[1]
+        print("path ", path, (tr,tc))
+        
+
+
+
+
+    #print(res)
+    return fire, path
 
 def visualize_ship(ship, path):
     color_map = {
@@ -218,8 +371,8 @@ def visualize_ship(ship, path):
 
 def main():
     ship, open, closed, items = initShip(40)
-    q = 0.1
-    path = bot1(ship.copy(),open,closed,items, q)
+    q = 0.23
+    ship, path = bot2(ship.copy(),open,closed,items, q)
     visualize_ship(ship, path)
     
 
