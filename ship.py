@@ -1,31 +1,32 @@
 import random
 import numpy as np
 import heapq
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors 
 
-random.seed(23) #23 for lebron
-
+random.seed(23) # 23 for lebron
 
 def initShip(d):
         
     dimension = d
+    
+    # 0 = closed
+    # 1 = open 
+    # 2 = bot
+    # -2 = button
+    # -1 = fire
 
-    #initialize ship to size dimension
-    #0 will be closed, 1 will be open, 
-    #2 will be bot, -2 will be button, -1 will be fire
-
+    # initialize ship to size dimension
     ship = [[0] * dimension for t in range(dimension)] 
-
 
     for row in ship:
         print(row)
     
     return createShip(ship)
-        
-
 
 def createShip(ship):    
     d = len(ship)
-    toOpen = random.sample(range(d), 2)
+    toOpen = random.sample(range(1,d-1), 2) # range is set from 1 to d-1 to ensure we select from interior
 
     row,col= toOpen
     ship[row][col] = 1
@@ -35,10 +36,10 @@ def createShip(ship):
     singleNeighbor = set()
     closed = set()
 
-    for dr,dc in directions:
-        r = row+dr
-        c = col+dc
-        if 0<=r<d and 0<=c<d:
+    for dr, dc in directions:
+        r = row + dr
+        c = col + dc
+        if 0 <= r < d and 0 <= c < d:
             singleNeighbor.add((r,c))
 
     while singleNeighbor:
@@ -133,24 +134,57 @@ def bot1(ship,open,closed,items):
             curr = prev[curr]
         path.reverse()
         print("final path ",path)
-  
-
-    
-
-
 
     return
 
 
+def printShip(ship):
+    map = {
+        0 : '#',
+        1 : ' ',
+        -1 : 'F',
+        2 : '@',
+        -2 : 'B'
+    }
+
+    d = len(ship)
+
+    for i in range(d):
+        for j in range(d):
+            print(map[ship[i][j]], end = " ")
+        print()
+
+
+
+def visualize_ship(ship):
+    color_map = {
+        0: 'black',  # Wall
+        1: 'white',  # Empty space
+        -1: 'red',   # F
+        2: 'blue',   # @
+        -2: 'green'  # B
+    }
+    
+    d = len(ship)
+    img = np.zeros((d, d, 3))
+    
+    for i in range(d):
+        for j in range(d):
+            img[i, j] = mcolors.to_rgb(color_map[ship[i][j]])  # Use correct function
+    
+    plt.imshow(img, interpolation='nearest')
+    plt.xticks([])
+    plt.yticks([])
+    plt.show()
+
 
 
 def main():
-    ship, open, closed, items = initShip(10)
+    ship, open, closed, items = initShip(40)
 
-    bot1(ship.copy(),open,closed,items)
+    #bot1(ship.copy(),open,closed,items)
+    visualize_ship(ship)
     
-
-
 
 if __name__ == "__main__":
     main()
