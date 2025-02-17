@@ -146,6 +146,7 @@ def bot1(ship,open,closed,items, q):
         if (r,c) == (button_r,button_c):
             sol = (r,c)
             break
+        visited.add((r,c))
         for dr,dc in directions:
             row = r + dr
             col = c + dc
@@ -153,7 +154,6 @@ def bot1(ship,open,closed,items, q):
                 estCost = cost + heuristic((row,col))
                 heapq.heappush(heap, (estCost,row,col))
                 prev[(row,col)] = (r,c)
-                visited.add((r,c))
 
     if sol != None:
         curr = sol
@@ -200,7 +200,6 @@ def bot1(ship,open,closed,items, q):
             # #print("k", k)
             prob_f = (1 - ((1-q) ** k))
             
-            random.seed()
             result = random.choices(["fire", "no fire"], weights=[prob_f, 1-prob_f])[0]
             #print("result ", result, "iteration ", t)
             
@@ -232,27 +231,29 @@ def bot2(ship,open,closed,items, q):
         cell2 = (button_r,button_c)
         return abs(cell1[0] - cell2[0]) + abs(cell1[1]-cell2[1])
 
-
-    def astar(bot_r,bot_c):
+    def astar(tempr,tempc,map):
+        print("tempr,tempc",tempr,tempc)
         heap = []
-        heapq.heappush(heap, (0,bot_r,bot_c))
+        heapq.heappush(heap, (0,tempr,tempc))
         prev = {}
         totalCost = {}
-        prev[(bot_r,bot_c)] = None
-        totalCost[(bot_r, bot_c)] = 0
+        prev[(tempr,tempc)] = None
+        totalCost[(tempr, tempc)] = 0
 
-        # #print("running a*", heap, prev)
+        print("running a*", heap, prev,tempr,tempc)
         sol = None
         visited = set()
         while heap:
+            # print("heap", heap)
             cost, r, c =  heapq.heappop(heap)
-            if (r,c) == (button_r,button_c):
+            if map[r][c] == -2:
                 sol = (r,c)
                 break
+            visited.add((r,c))
             for dr,dc in directions:
                 row = r + dr
                 col = c + dc
-                if 0<=row<d and 0<=col<d and (ship[row][col] != 0 and ship[row][col] != -1) and (row,col) not in visited:
+                if 0<=row<d and 0<=col<d and (map[row][col] != 0 and map[row][col] != -1) and (row,col) not in visited:
                     estCost = cost + heuristic((row,col))
                     heapq.heappush(heap, (estCost,row,col))
                     prev[(row,col)] = (r,c)
@@ -260,18 +261,20 @@ def bot2(ship,open,closed,items, q):
 
         if sol != None:
             curr = sol
-            path = []
+            path = deque()
             # #print(prev, curr)
 
             while curr != None:
                 path.append(curr)
                 curr = prev[curr]
-            
-        return sol, path
+            path.reverse()
+            print("path inside a* func", path)
+            return sol, path
+        return None, None
     
-
-
-
+    # for i in ship:
+    #     print(i)
+    # print(astar(12,5,ship))
 
     inQueue = set()
     fire_q = deque()
@@ -284,20 +287,23 @@ def bot2(ship,open,closed,items, q):
     res = "success"
     fire = ship
     tr, tc = bot_r,bot_c
-
+    final_path = []
     while fire_q:
-        sol, path = astar(tr,tc)
+        final_path.append((tr,tc))
 
         if (tr, tc) == (button_r, button_c):
             break
 
-        if sol == None:
+        sol, path = astar(tr,tc,fire)
+
+        print("path", path)
+
+        if path == None:
             res = "failure"
             break
     
         if fire[tr][tc] == -1:
             res = "failure"
-            #print(res)
             break
 
         for x in range(len(fire_q)):
@@ -305,6 +311,7 @@ def bot2(ship,open,closed,items, q):
 
             if (row, col) in inQueue:  
                 inQueue.remove((row, col))
+
             k = 0
             for dr, dc in directions:
                 nr, nc = row + dr, col + dc
@@ -314,7 +321,6 @@ def bot2(ship,open,closed,items, q):
             # #print("k", k)
             prob_f = (1 - ((1-q) ** k))
             
-            random.seed()
             result = random.choices(["fire", "no fire"], weights=[prob_f, 1-prob_f])[0]
             #print("result ", result, "iteration ", t)
             if result=="fire":
@@ -328,19 +334,22 @@ def bot2(ship,open,closed,items, q):
                 fire_q.append((row,col))
                 inQueue.add((row,col))
 
-        visualize_ship(fire,path[0:t+1])
-        #print("fireq, ", fire_q)
+
+        visualize_ship(fire,final_path)
+        if path:
+            path.popleft()
+        if path:
+            tr,tc = path.popleft()
+
+
+
         t+=1
         
-        tr,tc = path[1]
-        print("path ", path, (tr,tc))
-        
-
-
-
+        #print("path ", path)
+        print("tr,tc",tr,tc)
 
     #print(res)
-    return fire, path
+    return res, fire, final_path
 
 def visualize_ship(ship, path):
     color_map = {
@@ -356,7 +365,7 @@ def visualize_ship(ship, path):
     
     for i in range(d):
         for j in range(d):
-            img[i, j] = mcolors.to_rgb(color_map[ship[i][j]])  # Use correct function
+            img[i, j] = mcolors.to_rgb(color_map[ship[i][j]])  
     
     for i in range(1,len(path)-1):
         r, c = path[i]
@@ -372,7 +381,8 @@ def visualize_ship(ship, path):
 def main():
     ship, open, closed, items = initShip(40)
     q = 0.23
-    ship, path = bot2(ship.copy(),open,closed,items, q)
+    res, ship, path = bot2(ship.copy(),open,closed,items, q)
+    print(res,"bot2")
     visualize_ship(ship, path)
     
 
