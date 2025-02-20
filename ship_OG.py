@@ -130,7 +130,8 @@ def init_ship(dimension):
     items = [bot_r,bot_c,fire_r,fire_c,button_r,button_c, fire_set]
     return ship, open_cells, closed, items
 
-#find path from bot to goal using A* algorithm
+# find path from bot to goal using A* algorithm
+
 def bot1(ship,open,closed,items, q):
     
     bot_r,bot_c,fire_r,fire_c,button_r,button_c, fire_set = items
@@ -160,7 +161,7 @@ def bot1(ship,open,closed,items, q):
         for dr,dc in directions:
             row = r + dr
             col = c + dc
-            if 0 <= row < d and 0 <= col <d and (ship[row][col] != 0 and ship[row][col] != -1 )and (row,col) not in visited:
+            if 0 <= row < d and 0 <= col < d and (ship[row][col] != 0 and ship[row][col] != -1 )and (row,col) not in visited:
                 estCost = cost + heuristic((row,col))
                 heapq.heappush(heap, (estCost,row,col))
                 prev[(row,col)] = (r,c)
