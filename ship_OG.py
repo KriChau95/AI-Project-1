@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors 
 from collections import deque
 
+global directions
+directions = [(0,1), (0,-1), (1,0), (-1,0)] # array to store adjacent directions needed during various traversal
+
 random.seed(4)
 
 # Initializes the maze with bot, button, fire, and open and closed cells based on an input dimension d - number of rows and columns
@@ -25,8 +28,6 @@ def init_ship(dimension):
     to_open = random.sample(range(1,d-1), 2) # range is set from 1 to d-1 to ensure we select from interior
     row, col = to_open
     ship[row][col] = 1
-
-    directions = [(0,1),(1,0),(-1,0),(0,-1)] # array to store adjacent directions needed during traversal
 
     single_neighbor = set() # stores all cells' blocked coordinates that have exactly 1 open neighbor
     closed = set() # stores cells that have no chance for being blocked coordinates with exactly 1 open neighbor
@@ -89,13 +90,10 @@ def init_ship(dimension):
 
     # create sets that  store coordinates of all the open cells and all the closed cells
     open_cells = set()
-    closed = set()
     for r in range(d):
         for c in range(d):
             if ship[r][c] == 1:
                 open_cells.add((r,c))
-            elif ship[r][c] == 0:
-                closed.add((r,c))
 
     # randomly place bot in one of the remaining open cells
     bot_r,bot_c = (random.choice(list(open_cells)))
@@ -113,77 +111,84 @@ def init_ship(dimension):
     ship[fire_r][fire_c] = -1
     ship[button_r][button_c] = -2
 
-    fire_set = set()
+    fire_q = deque()
 
     for dr, dc in directions:
         nr, nc = fire_r + dr, fire_c + dc
         if 0 <= nr < d and 0 <= nc < d and ship[nr][nc] == 1:
-            fire_set.add((nr,nc))
-    
+            fire_q.append((nr,nc))
+
     info = dict()
 
     info['ship'] = ship
     info['bot'] = (bot_r, bot_c)
     info['fire'] = (fire_r, fire_c)
     info['button'] = (button_r, button_c)
+    info['fire_q'] = fire_q
 
-    items = [bot_r,bot_c,fire_r,fire_c,button_r,button_c, fire_set]
-    return ship, open_cells, closed, items
+    return info
 
-# find path from bot to goal using A* algorithm
+def heuristic(cell1, button):
+    return abs(cell1[0] - button[0]) + abs(cell1[1]-button[1])
 
-def bot1(ship,open,closed,items, q):
-    
-    bot_r,bot_c,fire_r,fire_c,button_r,button_c, fire_set = items
-    d = len(ship)
+def astar(tempr,tempc,map,button):
 
-    def heuristic(cell1):
-        cell2 = (button_r,button_c)
-        return abs(cell1[0] - cell2[0]) + abs(cell1[1]-cell2[1])
+    d = len(map)
 
-    directions = [(0,1),(1,0),(-1,0),(0,-1)]
-
+    print("tempr,tempc",tempr,tempc)
     heap = []
-    heapq.heappush(heap, (0,bot_r,bot_c))
+    heapq.heappush(heap, (0,tempr,tempc))
     prev = {}
     totalCost = {}
-    prev[(bot_r,bot_c)] = None
-    totalCost[(bot_r, bot_c)] = 0
+    prev[(tempr,tempc)] = None
+    totalCost[(tempr, tempc)] = 0
 
+    print("running a*", heap, prev,tempr,tempc)
     sol = None
     visited = set()
     while heap:
+        # print("heap", heap)
         cost, r, c =  heapq.heappop(heap)
-        if ship[r][c] == -2:
+        if map[r][c] == -2:
             sol = (r,c)
             break
         visited.add((r,c))
         for dr,dc in directions:
             row = r + dr
             col = c + dc
-            if 0 <= row < d and 0 <= col < d and (ship[row][col] != 0 and ship[row][col] != -1 )and (row,col) not in visited:
-                estCost = cost + heuristic((row,col))
+            if 0<=row<d and 0<=col<d and (map[row][col] != 0 and map[row][col] != -1) and (row,col) not in visited:
+                estCost = cost + heuristic((row,col),button)
                 heapq.heappush(heap, (estCost,row,col))
                 prev[(row,col)] = (r,c)
+                visited.add((r,c))
 
     if sol != None:
         curr = sol
-        path = []
-        #print(prev, curr)
+        path = deque()
+        # #print(prev, curr)
 
         while curr != None:
             path.append(curr)
             curr = prev[curr]
         path.reverse()
-        
-        #print("final path ",path)
-    
-    inQueue = set()
+        print("path inside a* func", path)
+        visualize_ship(map,path)
+        return path
+    else:
+        return None
 
-    fire_q = deque()
-    for i in fire_set:
-        fire_q.append(i)
-        inQueue.add(i)
+# find path from bot to goal using A* algorithm
+def bot1(info, q):
+
+    ship = info['ship']
+    bot_r, bot_c = info['bot']
+    button = info['button']
+    fire_q = info['fire_q']
+    
+    d = len(ship)
+
+    path = astar(bot_r, bot_c, ship, button)
+    inQueue = set(fire_q)
 
     t = 1
     res = "success"
@@ -197,7 +202,7 @@ def bot1(ship,open,closed,items, q):
             res = "failure"
             break
 
-        visualize_ship(fire,path[0:t+1],None)
+        visualize_ship(fire,list(path)[0:t+1])
 
         for x in range(len(fire_q)):
             row, col = fire_q.popleft()
@@ -230,71 +235,21 @@ def bot1(ship,open,closed,items, q):
 
         #print("fireq, ", fire_q)
         t+=1
+
     print("path1",path)
     return res,fire, path, t
 
-def bot2(ship,open,closed,items, q):
-    #find path from bot to goal
-    bot_r,bot_c,fire_r,fire_c,button_r,button_c, fire_set = items
-    d = len(ship)
-    directions = [[0,1],[1,0],[-1,0],[0,-1]]
-
-    def heuristic(cell1):
-        cell2 = (button_r,button_c)
-        return abs(cell1[0] - cell2[0]) + abs(cell1[1]-cell2[1])
-
-    def astar(tempr,tempc,map):
-        print("tempr,tempc",tempr,tempc)
-        heap = []
-        heapq.heappush(heap, (0,tempr,tempc))
-        prev = {}
-        totalCost = {}
-        prev[(tempr,tempc)] = None
-        totalCost[(tempr, tempc)] = 0
-
-        print("running a*", heap, prev,tempr,tempc)
-        sol = None
-        visited = set()
-        while heap:
-            # print("heap", heap)
-            cost, r, c =  heapq.heappop(heap)
-            if map[r][c] == -2:
-                sol = (r,c)
-                break
-            visited.add((r,c))
-            for dr,dc in directions:
-                row = r + dr
-                col = c + dc
-                if 0<=row<d and 0<=col<d and (map[row][col] != 0 and map[row][col] != -1) and (row,col) not in visited:
-                    estCost = cost + heuristic((row,col))
-                    heapq.heappush(heap, (estCost,row,col))
-                    prev[(row,col)] = (r,c)
-                    visited.add((r,c))
-
-        if sol != None:
-            curr = sol
-            path = deque()
-            # #print(prev, curr)
-
-            while curr != None:
-                path.append(curr)
-                curr = prev[curr]
-            path.reverse()
-            print("path inside a* func", path)
-            return sol, path
-        else:
-            return None, None
+def bot2(info, q):
     
-    # for i in ship:
-    #     print(i)
-    # print(astar(12,5,ship))
+    #find path from bot to goal
+    ship = info['ship']
+    bot_r, bot_c = info['bot']
+    button = info['button']
+    fire_q = info['fire_q']
+    
+    d = len(ship)
 
-    inQueue = set()
-    fire_q = deque()
-
-    for i in fire_set:
-        fire_q.append(i)
-        inQueue.add(i)
+    inQueue = set(fire_q)
 
     t = 1
     res = "success"
@@ -304,12 +259,10 @@ def bot2(ship,open,closed,items, q):
     while fire_q:
         final_path.append((tr,tc))
 
-        if (tr, tc) == (button_r, button_c):
+        if (tr, tc) == button:
             break
 
-        sol, path = astar(tr,tc,fire)
-
-        print("path", path)
+        path = astar(tr,tc,fire, button)
 
         if path == None:
             res = "failure"
@@ -319,7 +272,7 @@ def bot2(ship,open,closed,items, q):
             res = "failure"
             break
         
-        visualize_ship(fire,final_path,None)
+        # visualize_ship(fire,list(final_path)[0:t+1])
 
         for x in range(len(fire_q)):
             row, col = fire_q.popleft()
@@ -365,67 +318,16 @@ def bot2(ship,open,closed,items, q):
     #print(res)
     return res, fire, final_path, t
 
-def bot3(ship,open,closed,items, q):
+def bot3(info, q):
     #find path from bot to goal
-    bot_r,bot_c,fire_r,fire_c,button_r,button_c, fire_set = items
-    d = len(ship)
-    directions = [[0,1],[1,0],[-1,0],[0,-1]]
-
-    def heuristic(cell1):
-        cell2 = (button_r,button_c)
-        return abs(cell1[0] - cell2[0]) + abs(cell1[1]-cell2[1])
-
-    def astar(tempr,tempc,map):
-        print("tempr,tempc",tempr,tempc)
-        heap = []
-        heapq.heappush(heap, (0,tempr,tempc))
-        prev = {}
-        totalCost = {}
-        prev[(tempr,tempc)] = None
-        totalCost[(tempr, tempc)] = 0
-
-        print("running a*", heap, prev,tempr,tempc)
-        sol = None
-        visited = set()
-        while heap:
-            # print("heap", heap)
-            cost, r, c =  heapq.heappop(heap)
-            if map[r][c] == -2:
-                sol = (r,c)
-                break
-            visited.add((r,c))
-            for dr,dc in directions:
-                row = r + dr
-                col = c + dc
-                if 0<=row<d and 0<=col<d and (map[row][col] != 0 and map[row][col] != -1) and (row,col) not in visited:
-                    estCost = cost + heuristic((row,col))
-                    heapq.heappush(heap, (estCost,row,col))
-                    prev[(row,col)] = (r,c)
-                    visited.add((r,c))
-
-        if sol != None:
-            curr = sol
-            path = deque()
-            # #print(prev, curr)
-
-            while curr != None:
-                path.append(curr)
-                curr = prev[curr]
-            path.reverse()
-            print("path inside a* func", path)
-            return sol, path
-        return None, None
+    ship = info['ship']
+    bot_r, bot_c = info['bot']
+    button = info['button']
+    fire_q = info['fire_q']
     
-    # for i in ship:
-    #     print(i)
-    # print(astar(12,5,ship))
+    d = len(ship)
 
-    inQueue = set()
-    fire_q = deque()
-
-    for i in fire_set:
-        fire_q.append(i)
-        inQueue.add(i)
+    inQueue = set(fire_q)
 
     t = 1
     res = "success"
@@ -436,7 +338,7 @@ def bot3(ship,open,closed,items, q):
 
         final_path.append((tr,tc))
 
-        if (tr, tc) == (button_r, button_c):
+        if (tr, tc) == button:
             print("tr==tc, breaking")
             break
         
@@ -449,14 +351,14 @@ def bot3(ship,open,closed,items, q):
                     for dr,dc in directions:
                         r = row + dr
                         c = col + dc
-                        if 0 <= r < d and 0 <= c < d:
+                        if 0 <= r < d and 0 <= c < d and fire[r][c] != 1:
                             inflation_map[r][c] = -1
 
 
-        sol, path = astar(tr,tc,inflation_map)
+        path = astar(tr,tc,inflation_map, button)
 
         if path == None:
-            sol, path = astar(tr,tc,fire)
+            path = astar(tr,tc,fire, button)
 
 
         print("path", path)
@@ -498,7 +400,7 @@ def bot3(ship,open,closed,items, q):
                 inQueue.add((row,col))
 
 
-        visualize_ship(fire,final_path,None)
+        # visualize_ship(fire,list(final_path)[:t+1])
 
         if path:
             path.popleft()
@@ -516,10 +418,7 @@ def bot3(ship,open,closed,items, q):
     return res, fire, final_path, t
 
 
-def visualize_ship(sol_ship, sol_path,t):
-    plt.clf()
-    plt.close()
-    plt.figure()
+def visualize_ship(ship, path):
     color_map = {
         0: 'black',  # Wall
         1: 'white',  # Empty space
@@ -528,22 +427,16 @@ def visualize_ship(sol_ship, sol_path,t):
         -2: 'green'  # Button
     }
     
-    d = len(sol_ship)
+    d = len(ship)
     img = np.zeros((d, d, 3))
     
     for i in range(d):
         for j in range(d):
-            img[i, j] = mcolors.to_rgb(color_map[sol_ship[i][j]])  
-    if t:
-        i = 0
-        while i<len(sol_path)-1 and i < t+1:
-            r, c = sol_path[i]
-            img [r, c] = mcolors.to_rgb('orange')
-            i+=1
-    else:
-        for i in range(1,len(sol_path)-1):
-            r, c = sol_path[i]
-            img [r, c] = mcolors.to_rgb('orange')
+            img[i, j] = mcolors.to_rgb(color_map[ship[i][j]])  
+    
+    for i in range(1,len(path)-1):
+        r, c = path[i]
+        img [r, c] = mcolors.to_rgb('orange')
 
     plt.imshow(img, interpolation='nearest')
     plt.xticks([])
@@ -552,25 +445,15 @@ def visualize_ship(sol_ship, sol_path,t):
 
 
 
-
 def main():
-    ship, open, closed, items = init_ship(40)
+
+    ship_info = init_ship(40)
     q = .73
-    start_ship1 = [row.copy() for row in ship]
-    start_ship2 = [row.copy() for row in ship]
-    start_ship3 = [row.copy() for row in ship]
 
-    res1,ship1, path1, t1 = bot1(start_ship1,open,closed,items,q)
-    print(res1,"bot1")
-    visualize_ship(ship1, path1,t1)
+    # bot1(ship_info.copy(), q)
+    bot3(ship_info.copy(), q)
 
-    res2, ship2, path2,t2 = bot2(start_ship2,open,closed,items,q)
-    print(res2,"bot2")
-    visualize_ship(ship2, path2,t2)
-    
-    res3,ship3, path3,t3 = bot3(start_ship3,open,closed,items,q)
-    print(res3,"bot3")
-    visualize_ship(ship3, path3,t3)
+
 
    
 
