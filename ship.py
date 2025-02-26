@@ -135,7 +135,7 @@ def astar(tempr,tempc,map,button):
 
     d = len(map)
 
-    print("tempr,tempc",tempr,tempc)
+    ##print("tempr,tempc",tempr,tempc)
     heap = []
     heapq.heappush(heap, (0,tempr,tempc))
     prev = {}
@@ -143,11 +143,11 @@ def astar(tempr,tempc,map,button):
     prev[(tempr,tempc)] = None
     totalCost[(tempr, tempc)] = 0
 
-    print("running a*", heap, prev,tempr,tempc)
+    ##print("running a*", heap, prev,tempr,tempc)
     sol = None
     visited = set()
     while heap:
-        # print("heap", heap)
+        # #print("heap", heap)
         cost, r, c =  heapq.heappop(heap)
         if map[r][c] == -2:
             sol = (r,c)
@@ -165,14 +165,14 @@ def astar(tempr,tempc,map,button):
     if sol != None:
         curr = sol
         path = deque()
-        # #print(prev, curr)
+        # ##print(prev, curr)
 
         while curr != None:
             path.append(curr)
             curr = prev[curr]
         path.reverse()
-        print("path inside a* func", path)
-        visualize_ship(map,path)
+        ##print("path inside a* func", path)
+        #visualize_ship(map,path)
         return path
     else:
         return None
@@ -202,7 +202,6 @@ def bot1(info, q):
             res = "failure"
             break
 
-        visualize_ship(fire,list(path)[0:t+1])
 
         for x in range(len(fire_q)):
             row, col = fire_q.popleft()
@@ -216,11 +215,11 @@ def bot1(info, q):
                 if 0 <= nr < d and 0 <= nc < d and fire[nr][nc] == -1:
                     k += 1
             
-            # #print("k", k)
+            # ##print("k", k)
             prob_f = (1 - ((1-q) ** k))
             
             result = random.choices(["fire", "no fire"], weights=[prob_f, 1-prob_f])[0]
-            #print("result ", result, "iteration ", t)
+            ##print("result ", result, "iteration ", t)
             
             if result=="fire":
                 fire[row][col] = -1
@@ -233,10 +232,10 @@ def bot1(info, q):
                 fire_q.append((row,col))
                 inQueue.add((row,col))
 
-        #print("fireq, ", fire_q)
+        ##print("fireq, ", fire_q)
         t+=1
 
-    print("path1",path)
+    ##print("path1",path)
     return res,fire, path, t
 
 def bot2(info, q):
@@ -286,11 +285,11 @@ def bot2(info, q):
                 if 0 <= nr < d and 0 <= nc < d and fire[nr][nc] == -1:
                     k += 1
             
-            # #print("k", k)
+            # ##print("k", k)
             prob_f = (1 - ((1-q) ** k))
             
             result = random.choices(["fire", "no fire"], weights=[prob_f, 1-prob_f])[0]
-            #print("result ", result, "iteration ", t)
+            ##print("result ", result, "iteration ", t)
             if result=="fire":
                 fire[row][col] = -1
                 for dr, dc in directions:
@@ -312,10 +311,10 @@ def bot2(info, q):
 
         t+=1
         
-        #print("path ", path)
-        print("tr,tc",tr,tc)
+        ##print("path ", path)
+        #print("tr,tc",tr,tc)
 
-    #print(res)
+    ##print(res)
     return res, fire, final_path, t
 
 def bot3(info, q):
@@ -339,7 +338,7 @@ def bot3(info, q):
         final_path.append((tr,tc))
 
         if (tr, tc) == button:
-            print("tr==tc, breaking")
+            #print("tr==tc, breaking")
             break
         
 
@@ -361,7 +360,7 @@ def bot3(info, q):
             path = astar(tr,tc,fire, button)
 
 
-        print("path", path)
+        #print("path", path)
 
         if path == None:
             res = "failure"
@@ -383,11 +382,11 @@ def bot3(info, q):
                 if 0 <= nr < d and 0 <= nc < d and fire[nr][nc] == -1:
                     k += 1
             
-            # #print("k", k)
+            # ##print("k", k)
             prob_f = (1 - ((1-q) ** k))
             
             result = random.choices(["fire", "no fire"], weights=[prob_f, 1-prob_f])[0]
-            #print("result ", result, "iteration ", t)
+            ##print("result ", result, "iteration ", t)
             if result=="fire":
                 fire[row][col] = -1
                 for dr, dc in directions:
@@ -411,10 +410,10 @@ def bot3(info, q):
 
         t+=1
         
-        #print("path ", path)
-        print("tr,tc",tr,tc)
+        ##print("path ", path)
+        #print("tr,tc",tr,tc)
 
-    #print(res)
+    ##print(res)
     return res, fire, final_path, t
 
 
@@ -433,7 +432,7 @@ def bot4(info, q):
     fire = [row.copy() for row in ship]
     tr, tc = bot_r,bot_c
     final_path = []
-    print("before, ")
+    #print("before, ")
     visualize_ship(fire, None)
 
     #calculate probability map with depth = 5 (5 can be changed with testing)
@@ -452,11 +451,11 @@ def bot4(info, q):
                 if 0 <= nr < d and 0 <= nc < d and fire[nr][nc] == -1:
                     k += 1
             
-            # #print("k", k)
+            # ##print("k", k)
             prob_f = (1 - ((1-q) ** k))
             
             result = random.choices(["fire", "no fire"], weights=[prob_f, 1-prob_f])[0]
-            #print("result ", result, "iteration ", t)
+            ##print("result ", result, "iteration ", t)
             if result=="fire":
                 fire[row][col] = -1
                 for dr, dc in directions:
@@ -467,7 +466,7 @@ def bot4(info, q):
             else:
                 fire_q.append((row,col))
                 inQueue.add((row,col))
-    print("after, ")
+    #print("after, ")
     visualize_ship(fire, None)
     random.seed(4)
 
@@ -479,7 +478,7 @@ def bot4(info, q):
         final_path.append((tr,tc))
 
         if (tr, tc) == button:
-            print("tr==tc, breaking")
+            #print("tr==tc, breaking")
             break
         
 
@@ -501,7 +500,7 @@ def bot4(info, q):
             path = astar(tr,tc,fire, button)
 
 
-        print("path", path)
+        #print("path", path)
 
         if path == None:
             res = "failure"
@@ -523,11 +522,11 @@ def bot4(info, q):
                 if 0 <= nr < d and 0 <= nc < d and fire[nr][nc] == -1:
                     k += 1
             
-            # #print("k", k)
+            # ##print("k", k)
             prob_f = (1 - ((1-q) ** k))
             
             result = random.choices(["fire", "no fire"], weights=[prob_f, 1-prob_f])[0]
-            #print("result ", result, "iteration ", t)
+            ##print("result ", result, "iteration ", t)
             if result=="fire":
                 fire[row][col] = -1
                 for dr, dc in directions:
@@ -551,14 +550,15 @@ def bot4(info, q):
 
         t+=1
         
-        #print("path ", path)
-        print("tr,tc",tr,tc)
+        ##print("path ", path)
+        #print("tr,tc",tr,tc)
 
-    #print(res)
+    ##print(res)
     return res, fire, final_path, t
 
 
 def visualize_ship(ship, path):
+
     color_map = {
         0: 'black',  # Wall
         1: 'white',  # Empty space
