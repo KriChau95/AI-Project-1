@@ -1,2 +1,2 @@
-from ship_OG import *
+from ship import *
 
