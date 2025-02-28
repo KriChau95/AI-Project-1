@@ -128,8 +128,192 @@ def init_ship(dimension):
 
     return info
 
+def calculate_prob_fire_map(info, q):
+    
+    ship = info['ship']
+    bot_r, bot_c = info['bot']
+    button = info['button']
+    fire_q = info['fire_q']
+
+    d = len(ship)
+
+    prob_map = [[0] * d for _ in range(d)]
+
+    inQueue = set(fire_q)
+    visited = set(fire_q)
+
+    danger = 10
+
+    danger_q = deque()
+
+
+    while danger > 0:
+
+        for r,c in inQueue:
+            for dr,dc in directions:
+                row = r + dr
+                col = c + dc
+                if 0<=row<d and 0<=col<d and (ship[row][col] != 0 and ship[row][col] != -1) and (row,col) not in visited:
+                    danger_q.append((row, col))
+                    visited.add((row, col))
+                    prob_map[row][col] += danger
+
+
+        danger -= 1
+
+    
+    # visualize_danger(ship, prob_map)
+        
+            
+
+def visualize_danger(ship, prob_map):
+    color_map = {
+        0: 'black',  # Wall
+        1: 'white',  # Empty space
+        -1: 'red',   # Fire
+        2: 'blue',   # Bot
+        -2: 'green'  # Button
+    }
+    print(prob_map)
+    d = len(ship)
+    img = np.zeros((d, d, 3))
+    
+    for i in range(d):
+        for j in range(d):
+            if prob_map and prob_map[i][j] > 0:
+                # Use a gradient of red based on the danger level
+                danger_level = prob_map[i][j] / 10  # Normalize danger level to [0, 1]
+                img[i, j] = (1.0, 1.0 - danger_level, 1.0 - danger_level)  # Lighter red for lower danger
+            else:
+                img[i, j] = mcolors.to_rgb(color_map[ship[i][j]])  
+    
+    plt.imshow(img, interpolation='nearest')
+    plt.xticks([])
+    plt.yticks([])
+    plt.show()
+                
+
+
+def bot4(info, q):
+
+    ship = info['ship']
+    bot_r, bot_c = info['bot']
+    button = info['button']
+    fire_q = info['fire_q']
+    
+    d = len(ship)
+
+    inQueue = set(fire_q)
+
+    prob_fire = [[] * d for _ in range(d)]
+
+    t = 1
+    res = "success"
+    fire = [row.copy() for row in ship]
+    tr, tc = bot_r,bot_c
+    final_path = []
+    #print("before, ")
+    visualize_ship(fire, None)
+
+    #calculate probability map with depth = 5 (5 can be changed with testing)
+    random.seed(23) 
+
+    #print("after, ")
+    visualize_ship(fire, None)
+    random.seed(4)
+
+
+
+
+    while fire_q:
+        break
+        final_path.append((tr,tc))
+
+        if (tr, tc) == button:
+            #print("tr==tc, breaking")
+            break
+        
+
+        inflation_map = [row.copy() for row in fire]
+
+        for row in range(d):
+            for col in range(d):
+                if fire[row][col] == -1:
+                    for dr,dc in directions:
+                        r = row + dr
+                        c = col + dc
+                        if 0 <= r < d and 0 <= c < d and fire[r][c] != 1:
+                            inflation_map[r][c] = -1
+
+
+        path = astar(tr,tc,inflation_map, button)
+
+        if path == None:
+            path = astar(tr,tc,fire, button)
+
+
+        #print("path", path)
+
+        if path == None:
+            res = "failure"
+            break
+    
+        if fire[tr][tc] == -1:
+            res = "failure"
+            break
+
+        for x in range(len(fire_q)):
+            row, col = fire_q.popleft()
+
+            if (row, col) in inQueue:  
+                inQueue.remove((row, col))
+
+            k = 0
+            for dr, dc in directions:
+                nr, nc = row + dr, col + dc
+                if 0 <= nr < d and 0 <= nc < d and fire[nr][nc] == -1:
+                    k += 1
+            
+            # ##print("k", k)
+            prob_f = (1 - ((1-q) ** k))
+            
+            result = random.choices(["fire", "no fire"], weights=[prob_f, 1-prob_f])[0]
+            ##print("result ", result, "iteration ", t)
+            if result=="fire":
+                fire[row][col] = -1
+                for dr, dc in directions:
+                    nr, nc = row + dr, col + dc
+                    if 0 <= nr < d and 0 <= nc < d and (fire[nr][nc] != 0 and fire[nr][nc] != -1) and (nr,nc) not in inQueue:
+                        fire_q.append((nr,nc))
+                        inQueue.add((nr,nc))
+            else:
+                fire_q.append((row,col))
+                inQueue.add((row,col))
+
+
+        # visualize_ship(fire,list(final_path)[:t+1])
+
+        if path:
+            path.popleft()
+        if path:
+            tr,tc = path.popleft()
+
+
+
+        t+=1
+        
+        ##print("path ", path)
+        #print("tr,tc",tr,tc)
+
+    ##print(res)
+    return res, fire, final_path, t
+
+
+
 def heuristic(cell1, button):
     return abs(cell1[0] - button[0]) + abs(cell1[1]-button[1])
+
+
 
 def astar(tempr,tempc,map,button):
 
@@ -197,12 +381,9 @@ def bot1(info, q):
     while fire_q and t<len(path):
 
         tr, tc = path[t]
-
         if fire[tr][tc] == -1:
             res = "failure"
             break
-
-
         for x in range(len(fire_q)):
             row, col = fire_q.popleft()
 
@@ -308,7 +489,7 @@ def bot2(info, q):
             tr,tc = path.popleft()
 
 
-
+        
         t+=1
         
         ##print("path ", path)
@@ -333,6 +514,10 @@ def bot3(info, q):
     fire = [row.copy() for row in ship]
     tr, tc = bot_r,bot_c
     final_path = []
+
+
+
+
     while fire_q:
 
         final_path.append((tr,tc))
@@ -355,7 +540,7 @@ def bot3(info, q):
 
 
         path = astar(tr,tc,inflation_map, button)
-
+        
         if path == None:
             path = astar(tr,tc,fire, button)
 
@@ -399,7 +584,7 @@ def bot3(info, q):
                 inQueue.add((row,col))
 
 
-        # visualize_ship(fire,list(final_path)[:t+1])
+        # visualize_ship(fire,list(final_path))
 
         if path:
             path.popleft()
@@ -417,7 +602,7 @@ def bot3(info, q):
     return res, fire, final_path, t
 
 
-def bot4(info, q):
+def createBot(info,q):
     ship = info['ship']
     bot_r, bot_c = info['bot']
     button = info['button']
@@ -425,18 +610,44 @@ def bot4(info, q):
     
     d = len(ship)
 
-    inQueue = set(fire_q)
+    prob_grid = np.zeros((5,40,40))
 
-    t = 1
-    res = "success"
+    depth = 5
     fire = [row.copy() for row in ship]
-    tr, tc = bot_r,bot_c
-    final_path = []
-    #print("before, ")
-    visualize_ship(fire, None)
+    time = 0
+    for iteration in range(depth):
 
-    #calculate probability map with depth = 5 (5 can be changed with testing)
-    random.seed(23) 
+        for x in range(len(fire_q)):
+            row, col = fire_q.popleft()
+
+            k = 0
+            for dr, dc in directions:
+                nr, nc = row + dr, col + dc
+                if 0 <= nr < d and 0 <= nc < d and fire[nr][nc] == -1:
+                    k += 1
+            
+            # ##print("k", k)
+            prob_f = (1 - ((1-q) ** k))
+            
+            result = random.choices(["fire", "no fire"], weights=[prob_f, 1-prob_f])[0]
+            ##print("result ", result, "iteration ", t)
+            if result=="fire":
+                fire[row][col] = -1
+                for dr, dc in directions:
+                    nr, nc = row + dr, col + dc
+                    if 0 <= nr < d and 0 <= nc < d and (fire[nr][nc] != 0 and fire[nr][nc] != -1) and (nr,nc) not in inQueue:
+                        fire_q.append((nr,nc))
+
+            else:
+                fire_q.append((row,col))
+        
+        prob_grid[iteration]
+
+
+
+        time+=1
+
+    return
 
     for iteration in range(5):
         for x in range(len(fire_q)):
@@ -465,97 +676,8 @@ def bot4(info, q):
                         inQueue.add((nr,nc))
             else:
                 fire_q.append((row,col))
-                inQueue.add((row,col))
-    #print("after, ")
-    visualize_ship(fire, None)
-    random.seed(4)
 
-
-
-
-    while fire_q:
-        break
-        final_path.append((tr,tc))
-
-        if (tr, tc) == button:
-            #print("tr==tc, breaking")
-            break
-        
-
-        inflation_map = [row.copy() for row in fire]
-
-        for row in range(d):
-            for col in range(d):
-                if fire[row][col] == -1:
-                    for dr,dc in directions:
-                        r = row + dr
-                        c = col + dc
-                        if 0 <= r < d and 0 <= c < d and fire[r][c] != 1:
-                            inflation_map[r][c] = -1
-
-
-        path = astar(tr,tc,inflation_map, button)
-
-        if path == None:
-            path = astar(tr,tc,fire, button)
-
-
-        #print("path", path)
-
-        if path == None:
-            res = "failure"
-            break
-    
-        if fire[tr][tc] == -1:
-            res = "failure"
-            break
-
-        for x in range(len(fire_q)):
-            row, col = fire_q.popleft()
-
-            if (row, col) in inQueue:  
-                inQueue.remove((row, col))
-
-            k = 0
-            for dr, dc in directions:
-                nr, nc = row + dr, col + dc
-                if 0 <= nr < d and 0 <= nc < d and fire[nr][nc] == -1:
-                    k += 1
-            
-            # ##print("k", k)
-            prob_f = (1 - ((1-q) ** k))
-            
-            result = random.choices(["fire", "no fire"], weights=[prob_f, 1-prob_f])[0]
-            ##print("result ", result, "iteration ", t)
-            if result=="fire":
-                fire[row][col] = -1
-                for dr, dc in directions:
-                    nr, nc = row + dr, col + dc
-                    if 0 <= nr < d and 0 <= nc < d and (fire[nr][nc] != 0 and fire[nr][nc] != -1) and (nr,nc) not in inQueue:
-                        fire_q.append((nr,nc))
-                        inQueue.add((nr,nc))
-            else:
-                fire_q.append((row,col))
-                inQueue.add((row,col))
-
-
-        # visualize_ship(fire,list(final_path)[:t+1])
-
-        if path:
-            path.popleft()
-        if path:
-            tr,tc = path.popleft()
-
-
-
-        t+=1
-        
-        ##print("path ", path)
-        #print("tr,tc",tr,tc)
-
-    ##print(res)
-    return res, fire, final_path, t
-
+    return
 
 def visualize_ship(ship, path):
 
@@ -587,13 +709,56 @@ def visualize_ship(ship, path):
 
 
 
+def spreadFire(info,q):
+    ship = info['ship']
+    bot_r, bot_c = info['bot']
+    button = info['button']
+    fire_q = info['fire_q']
+    
+    d = len(ship)
+    fire = [row.copy() for row in ship]
+
+    inQueue = set(fire_q)
+    while fire_q:
+        for x in range(len(fire_q)):
+                row, col = fire_q.popleft()
+
+                if (row, col) in inQueue:  
+                    inQueue.remove((row, col))
+
+                k = 0
+                for dr, dc in directions:
+                    nr, nc = row + dr, col + dc
+                    if 0 <= nr < d and 0 <= nc < d and fire[nr][nc] == -1:
+                        k += 1
+                
+                # ##print("k", k)
+                prob_f = (1 - ((1-q) ** k))
+                
+                result = random.choices(["fire", "no fire"], weights=[prob_f, 1-prob_f])[0]
+                ##print("result ", result, "iteration ", t)
+                if result=="fire":
+                    fire[row][col] = -1
+                    for dr, dc in directions:
+                        nr, nc = row + dr, col + dc
+                        if 0 <= nr < d and 0 <= nc < d and (fire[nr][nc] != 0 and fire[nr][nc] != -1) and (nr,nc) not in inQueue:
+                            fire_q.append((nr,nc))
+                            inQueue.add((nr,nc))
+                else:
+                    fire_q.append((row,col))
+                    inQueue.add((row,col))
+        visualize_ship(fire,None)
+
 def main():
 
     ship_info = init_ship(40)
     q = .73
 
-    # bot1(ship_info.copy(), q)
-    bot3(ship_info.copy(), q)
+
+    # res, fire, fire_path, t = bot3(ship_info.copy(), q)
+    # visualize_ship(ship_info['ship'],fire_path)
+    visualize_ship(ship_info["ship"],None)
+    calculate_prob_fire_map(ship_info,q)
 
 
 
