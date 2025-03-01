@@ -363,21 +363,80 @@ def bot4(info, q):
 
 
 
-def heuristic(cell1, button):
-    return abs(cell1[0] - button[0]) + abs(cell1[1]-button[1])
+
+
+def astar(start, map, button):
+    
+    def heuristic(cell1):
+        return abs(cell1[0] - button[0]) + abs(cell1[1]-button[1])
+    
+    
+    d = len(map)
+
+    fringe = []
+
+    #((0,0), 10) is pushed to the heap
+
+    heapq.heappush(fringe, (heuristic(start),start))
+    total_costs = dict()
+    total_costs[start] = 0
+    prev = dict()
+    prev[start] = None
+
+    while fringe:
+
+        curr = heapq.heappop(fringe)
+
+        if curr[1] == button:
+            
+            curr_p = curr[1]
+            path = deque()
+            while curr_p != None:
+                path.appendleft(curr_p)
+                curr_p = prev[curr_p]
+            return list(path)
+        
+        r,c = curr[1]
+        for dr, dc in directions:
+            nr, nc = r + dr, c + dc
+            child = (nr,nc)
+            if 0 <= nr < d and 0 <= nc < d and (map[nr][nc] != 0 and map[nr][nc] != -1):
+                cost = total_costs[curr[1]] + 1
+
+                est_total_cost = cost + heuristic(child)
+
+                if child not in total_costs:
+                    prev[child] = curr[1]
+                    total_costs[child] = cost
+                    heapq.heappush(fringe, (est_total_cost, child))
+
+    return []
+
+            
+
+            
+            
+         
+        
+
+
+
                         
 
-def astar(tempr,tempc,map,button):
+def astar_OG(start,map,button):
+
+    def heuristic(cell1):
+        return abs(cell1[0] - button[0]) + abs(cell1[1]-button[1])
 
     d = len(map)
 
     ##print("tempr,tempc",tempr,tempc)
     heap = []
-    heapq.heappush(heap, (0,tempr,tempc))
+    heapq.heappush(heap, (0,start[0],start[1]))
     prev = {}
     totalCost = {}
-    prev[(tempr,tempc)] = None
-    totalCost[(tempr, tempc)] = 0
+    prev[start] = None
+    totalCost[start] = 0
 
     ##print("running a*", heap, prev,tempr,tempc)
     sol = None
@@ -393,7 +452,7 @@ def astar(tempr,tempc,map,button):
             row = r + dr
             col = c + dc
             if 0<=row<d and 0<=col<d and (map[row][col] != 0 and map[row][col] != -1) and (row,col) not in visited:
-                estCost = cost + heuristic((row,col),button)
+                estCost = cost + heuristic((row,col))
                 heapq.heappush(heap, (estCost,row,col))
                 prev[(row,col)] = (r,c)
                 visited.add((r,c))
@@ -416,10 +475,10 @@ def astar(tempr,tempc,map,button):
 # find path from bot to goal using A* algorithm
 def bot1(info, fire_prog, visualize = False):
 
-    bot_r, bot_c = info['bot']
+    bot_start = info['bot']
     button = info['button']
 
-    path = astar(bot_r, bot_c, fire_prog[0], button)
+    path = astar(bot_start, fire_prog[0], button)
     t = 0
     
     res = "success"
@@ -437,19 +496,18 @@ def bot1(info, fire_prog, visualize = False):
 
 def bot2_2(info, fire_prog, visualize = False):
 
-    bot_r, bot_c = info['bot']
+    bot_start = info['bot']
     button = info['button']
 
-    curr_r, curr_c = bot_r, bot_c
-    path = astar(curr_r, curr_c, fire_prog[0], button)
+    path = astar(bot_start, fire_prog[0], button)
     if visualize: visualize_ship(fire_prog[0], path)
 
     i = 1
     while True:
-        curr_r, curr_c = path[1]
-        if (curr_r, curr_c) == button:
+        curr_pos = path[1]
+        if curr_pos == button:
             return "success"
-        path = astar(curr_r, curr_c, fire_prog[i], button)
+        path = astar(curr_pos, fire_prog[i], button)
         if not path:
             return "failure"
         if visualize: visualize_ship(fire_prog[i], path)
@@ -793,7 +851,7 @@ def main():
     fire_prog = create_fire_prog(copy.deepcopy(ship_info),q)
     
 
-    print(bot2_2(ship_info, fire_prog))
+    astar2(ship_info['bot'], ship_info['ship'], ship_info['button'])
 
 
     # res, fire, fire_path, t =

@@ -10,7 +10,7 @@ bot_2_results_file = "bot_2_results.txt"
 random.seed(42)
 
 if not os.path.exists(bot_1_results_file) or not(os.path.exists(bot_2_results_file)):
-    num_ships = 30
+    num_ships = 50
     ships = []
 
     for i in range(num_ships):
@@ -30,7 +30,7 @@ if not os.path.exists(bot_1_results_file) or not(os.path.exists(bot_2_results_fi
 
         for i in range(len(ships)):
 
-            visualize = j == 65
+            visualize = False
                 
             fire_prog = create_fire_prog(copy.deepcopy(ships[i]), q)
             
