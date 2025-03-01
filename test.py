@@ -1,122 +1,86 @@
-from collections import defaultdict
+import os
 from ship import *
 import matplotlib.pyplot as plt
-import os
-import copy
+from collections import defaultdict
 
-def save_success_dict(success_dict, filename):
-    with open(filename, "w") as f:
-        for q, count in success_dict.items():
-            f.write(f"{q} {count}\n")
+# Check if the results files exist
+bot_1_results_file = "bot_1_results.txt"
+bot_2_results_file = "bot_2_results.txt"
+bot_3_results_file = "bot_3_results.txt"
 
-def load_success_dict(filename):
-    success_dict = defaultdict(int)
-    if os.path.exists(filename):
-        with open(filename, "r") as f:
-            for line in f:
-                q, count = line.split()
-                success_dict[float(q)] = int(count)
-    return success_dict
+random.seed(42)
 
+if not os.path.exists(bot_1_results_file) or not(os.path.exists(bot_2_results_file)):
+    num_ships = 50
+    ships = []
 
-def winnable(info,fire_prog):
-    print("in winnable")
-    directions = [(0,1), (1,0), (-1,0), (0,-1)]
-    d = len(info['ship'])
-    visited = set()
-    queue = deque()
-    level = 0
+    for i in range(num_ships):
+        info = init_ship(40)
+        ships.append(info)
 
-    queue.append(ship['bot'])
+    bot_1_results = defaultdict(int)
+    bot_2_results = defaultdict(int)
+    bot_3_results = defaultdict(int)
 
-    while level<len(fire_prog):
-        # print("level ", level, "queue", queue)
-        x = len(queue)
-        for i in range(x):
-            r,c = queue.popleft()
-            if fire_prog[level][r][c] == -2:
-                return True
+    bot_1_results[0] = num_ships
+    bot_2_results[0] = num_ships
+    bot_3_results[0] = num_ships
 
-            for dr,dc in directions:
-                tr,tc = r+dr,c+dc
-                if 0<=tr<d and 0<=tc<d and (fire_prog[level][tr][tc] == 1 or fire_prog[level][tr][tc] == -2) and (tr,tc) not in visited:
-                    queue.append((tr,tc))
-                    visited.add((tr,tc))
+    for j in range(5, 101, 5):
 
-        level += 1
-    
-    return False
-    
+        q = j / 100
+        print("testing q =", q)
 
-num_tests = 20
-bots = [bot1, bot2, bot3]
-bot_names = ["Bot 1", "Bot 2", "Bot 3"]
-colors = ["blue", "red", "green"]
-markers = ["o", "s", "^"]
-ships = [init_ship(40) for _ in range(num_tests)]
-bot_success_dicts = {name: load_success_dict(f"success_dict_{name.lower().replace(' ', '_')}.txt") for name in bot_names}
+        for i in range(len(ships)):
 
-# for i,ship in enumerate(ships):
-#     print("this is ship number ",i)
-#     visualize_ship(ship["ship"],None)
-    
-    
-for j in range(5,105,5):
-
-    q=j/100
-    print("running for q = ", q)
-    for i, ship in enumerate(ships):
-
-        fire_prog = create_fire_prog(ship, q)
-
-        print("fireprog created")
-
-
-        res = bot1(copy.deepcopy(ship), q, fire_prog)
-        possible = winnable(ship,fire_prog)
-        print("running ship number ",i, "is it possible", possible)
-        print("running bot1 ",i)
-
-        if res == "success":
-            bot_success_dicts["Bot 1"][q] += 1
-        else:
-            print("fail bot1")
-        
-        # print("running bot2 ",i)
-
-        # res, fire, fire_path, t = bot2(copy.deepcopy(ship), q)
-        # if res == "success":
-        #     bot_success_dicts["Bot 2"][q] += 1
+            visualize = False
+                
+            fire_prog = create_fire_prog(copy.deepcopy(ships[i]), q)
             
-        # else:
-        #     print("fail bot2")
+            res_1 = bot1(ships[i], fire_prog, visualize)
+            
+            if res_1 == 'success':
+                bot_1_results[q] += 1
+                print("bot 1 subtest n =", i, "success")
+            else:
+                print("bot 1 subtest n =", i, "failure")
+            
+            res_2 = bot2(ships[i], fire_prog, visualize)
 
-        # print("running bot3 ",i)
+            if res_2 == 'success':
+                bot_2_results[q] += 1
+                print("bot 2 subtest n =", i, "success")
+            else:
+                print("bot 2 subtest n =", i, "failure")
 
-        # res, fire, fire_path, t = bot3(copy.deepcopy(ship), q)
+            res_3 = bot3(ships[i], fire_prog, visualize)
 
-        # if res == "success":
-        #     bot_success_dicts["Bot 3"][q] += 1
-        # else:
-        #     print("fail bot3")
+            if res_3 == 'success':
+                bot_3_results[q] += 1
+                print("bot 3 subtest n =", i, "success")
+            else:
+                print("bot 3 subtest n =", i, "failure")
+            
+            del fire_prog
 
-        
+    # Save results to a text file
+    with open(bot_1_results_file, "w") as f:
+        for q, success_count in bot_1_results.items():
+            f.write(f"{q}: {success_count}\n")
 
-for i, bot_name in enumerate(bot_names):
-    save_success_dict(bot_success_dicts[bot_name], f"success_dict_{bot_name.lower().replace(' ', '_')}.txt")
+    print("Results saved to bot_1_results.txt.")
 
-plt.figure(figsize=(8, 5))
-for i, bot_name in enumerate(bot_names):
-    success_dict = bot_success_dicts[bot_name]
-    q_values = sorted(success_dict.keys())
-    success_probs = [success_dict[q] / num_tests for q in q_values]
-    plt.plot(q_values, success_probs, marker=markers[i], linestyle='-', color=colors[i], label=bot_name)
+    with open(bot_2_results_file, "w") as f:
+        for q, success_count in bot_2_results.items():
+            f.write(f"{q}: {success_count}\n")
 
-plt.xlabel('q')
-plt.ylabel('Success Probability')
-plt.title('Success Probability vs q for Different Bots')
-plt.legend()
-plt.grid(True)
-plt.show()
+    print("Results saved to bot_2_results.txt.")
 
+    with open(bot_3_results_file, "w") as f:
+        for q, success_count in bot_3_results.items():
+            f.write(f"{q}: {success_count}\n")
 
+    print("Results saved to bot_3_results.txt.")
+
+else:
+    print("Results already exist. Skipping simulation.")
