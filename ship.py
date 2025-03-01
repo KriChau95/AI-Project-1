@@ -365,7 +365,7 @@ def bot4(info, q):
 
 def heuristic(cell1, button):
     return abs(cell1[0] - button[0]) + abs(cell1[1]-button[1])
-
+                        
 
 def astar(tempr,tempc,map,button):
 
@@ -414,7 +414,7 @@ def astar(tempr,tempc,map,button):
         return None
 
 # find path from bot to goal using A* algorithm
-def bot1(info, fire_prog):
+def bot1(info, fire_prog, visualize = False):
 
     bot_r, bot_c = info['bot']
     button = info['button']
@@ -425,7 +425,7 @@ def bot1(info, fire_prog):
     res = "success"
 
     while t<len(path):
-        #visualize_ship(fire_prog[t], list(path)[:t+1])
+        if visualize: visualize_ship(fire_prog[t], list(path)[:t+1])
 
         tr, tc = path[t]
         if fire_prog[t][tr][tc] == -1:
@@ -435,33 +435,26 @@ def bot1(info, fire_prog):
 
     return res
 
-def bot2_2(info, fire_prog):
+def bot2_2(info, fire_prog, visualize = False):
 
-    ship = info['ship']
     bot_r, bot_c = info['bot']
     button = info['button']
-    fire_q = info['fire_q']
-
-    d = len(ship)
 
     curr_r, curr_c = bot_r, bot_c
     path = astar(curr_r, curr_c, fire_prog[0], button)
-    # visualize_ship(fire_prog[0], path)
+    if visualize: visualize_ship(fire_prog[0], path)
 
     i = 1
     while True:
-        print(path)
         curr_r, curr_c = path[1]
         if (curr_r, curr_c) == button:
             return "success"
         path = astar(curr_r, curr_c, fire_prog[i], button)
         if not path:
             return "failure"
-        #visualize_ship(fire_prog[i], path)
+        if visualize: visualize_ship(fire_prog[i], path)
         i += 1
     
-
-
 
 def bot2(info, q):
     

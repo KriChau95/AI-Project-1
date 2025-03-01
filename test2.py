@@ -3,41 +3,69 @@ from ship import *
 import matplotlib.pyplot as plt
 from collections import defaultdict
 
-# Check if the results file exists
-results_file = "bot1_results.txt"
+# Check if the results files exist
+bot_1_results_file = "bot_1_results.txt"
+bot_2_results_file = "bot_2_results.txt"
 
-if not os.path.exists(results_file):
+random.seed(42)
+
+if not os.path.exists(bot_1_results_file) or not(os.path.exists(bot_2_results_file)):
     num_ships = 30
     ships = []
-    fire_progs = dict()
-
-    random.seed(42)
 
     for i in range(num_ships):
         info = init_ship(40)
         ships.append(info)
 
     bot_1_results = defaultdict(int)
+    bot_2_results = defaultdict(int)
+
+    bot_1_results[0] = num_ships
+    bot_2_results[0] = num_ships
 
     for j in range(5, 101, 5):
+
         q = j / 100
         print("testing q =", q)
 
         for i in range(len(ships)):
-            fire_prog = create_fire_prog(copy.deepcopy(ships[i]), q)
-            res = bot1(copy.deepcopy(ships[i]), fire_prog)
 
-            if res == 'success':
+            visualize = j == 65
+                
+            fire_prog = create_fire_prog(copy.deepcopy(ships[i]), q)
+            
+            res_1 = bot1(ships[i], fire_prog, visualize)
+            
+            if res_1 == 'success':
                 bot_1_results[q] += 1
-                print("subtest n =", i, "success")
+                print("bot 1 subtest n =", i, "success")
             else:
-                print("subtest n =", i, "failure")
+                print("bot 1 subtest n =", i, "failure")
+            
+            res_2 = bot2_2(ships[i], fire_prog, visualize)
+
+
+
+            if res_2 == 'success':
+                bot_2_results[q] += 1
+                print("bot 2 subtest n =", i, "success")
+            else:
+                print("bot 2 subtest n =", i, "failure")
+            
+            del fire_prog
 
     # Save results to a text file
-    with open(results_file, "w") as f:
+    with open(bot_1_results_file, "w") as f:
         for q, success_count in bot_1_results.items():
             f.write(f"{q}: {success_count}\n")
 
-    print("Results saved to bot1_results.txt.")
+    print("Results saved to bot_1_results.txt.")
+
+    with open(bot_2_results_file, "w") as f:
+        for q, success_count in bot_2_results.items():
+            f.write(f"{q}: {success_count}\n")
+
+    print("Results saved to bot_2_results.txt.")
+
 else:
-    print("bot1_results.txt already exists. Skipping simulation.")
+    print("Results already exist. Skipping simulation.")
