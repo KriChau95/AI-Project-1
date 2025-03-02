@@ -195,7 +195,7 @@ def probabilistic_search(info,fire_prog):
 
                 for dr,dc in directions:
                     tr,tc = r+dr,c+dc
-                    if 0<=tr<d and 0<=tc<d and ((threshold < fire_prog[min(len(fire_prog)-1,level+3)][tr][tc] <= 0) or fire_prog[level][tr][tc] == -2) and (tr,tc) not in visited:
+                    if 0<=tr<d and 0<=tc<d and ((threshold < fire_prog[min(len(fire_prog)-1,level+15)][tr][tc] <= 0) or fire_prog[level][tr][tc] == -2) and (tr,tc) not in visited:
                         queue.append((tr,tc))
                         visited.add((tr,tc))
                         prev[(tr,tc)] = (r,c)
