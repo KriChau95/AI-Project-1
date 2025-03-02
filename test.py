@@ -87,7 +87,7 @@ if not os.path.exists(bot_1_results_file):
 
             res_4, path = bot4(ships[i], fire_prog, q, visualize)
 
-            #visualize_ship(ships[i]['ship'], path)
+            
             
             if res_4 == 'success':
                 bot_4_results[q] += 1
@@ -95,6 +95,8 @@ if not os.path.exists(bot_1_results_file):
             else:
                 room_4_growth.append(("ship 4", q, i))
                 print("bot 4 subtest n =", i, "failure")
+                if q == .25:
+                    visualize_ship(ships[i]['ship'], path)
                 
             del fire_prog
         

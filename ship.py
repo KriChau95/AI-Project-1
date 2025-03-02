@@ -195,7 +195,7 @@ def probabilistic_search(info,fire_prog):
 
                 for dr,dc in directions:
                     tr,tc = r+dr,c+dc
-                    if 0<=tr<d and 0<=tc<d and ((threshold < fire_prog[min(len(fire_prog)-1,level+15)][tr][tc] <= 0) or fire_prog[level][tr][tc] == -2) and (tr,tc) not in visited:
+                    if 0<=tr<d and 0<=tc<d and ((threshold < fire_prog[min(len(fire_prog)-1,level+30)][tr][tc] <= 0) or fire_prog[level][tr][tc] == -2) and (tr,tc) not in visited:
                         queue.append((tr,tc))
                         visited.add((tr,tc))
                         prev[(tr,tc)] = (r,c)
@@ -451,7 +451,7 @@ def bot4(info, fire_prog, q, visualize=False):
     num_samples = 50
     min_fp_len = float('inf')  # Use inf to track minimum length
 
-    approx_len = len(astar(info['bot'], info['ship'], info['button'])) + 10
+    approx_len = len(astar(info['bot'], info['ship'], info['button'])) + 25
 
     for i in range(num_samples):
         #print("inside generate fire prog for num samples", datetime.datetime.now().time())
