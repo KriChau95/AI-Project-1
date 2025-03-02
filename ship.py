@@ -271,7 +271,6 @@ def bot2(info, fire_prog, visualize = False):
         if visualize: visualize_ship(fire_prog[i], path)
         i += 1
  
-
 def bot3(info, fire_prog, visualize = False):
 
     bot_start = info['bot']
@@ -349,7 +348,6 @@ def visualize_ship(ship, path, bot3 = ""):
         plt.title(bot3)
     plt.show()
 
-
 def spreadFire(info,q):
     ship = info['ship']
     bot_r, bot_c = info['bot']
@@ -393,11 +391,11 @@ def spreadFire(info,q):
 def main():
 
     ship_info = init_ship(40)
-    q = 0.2
+    q = 0.8
     fire_prog = create_fire_prog(copy.deepcopy(ship_info),q)
     
 
-    bot3_2(ship_info, fire_prog, visualize=True)
+    bot3(ship_info, fire_prog, visualize=True)
 
 
     # res, fire, fire_path, t =
