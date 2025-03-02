@@ -195,19 +195,20 @@ def probabilistic_search(info,fire_prog):
 
                 for dr,dc in directions:
                     tr,tc = r+dr,c+dc
-                    if 0<=tr<d and 0<=tc<d and ((threshold < fire_prog[min(len(fire_prog)-1,level+30)][tr][tc] <= 0) or fire_prog[level][tr][tc] == -2) and (tr,tc) not in visited:
+                    if 0<=tr<d and 0<=tc<d and ((threshold < fire_prog[min(len(fire_prog)-1,level+26)][tr][tc] <= 0) or fire_prog[level][tr][tc] == -2) and (tr,tc) not in visited:
                         queue.append((tr,tc))
                         visited.add((tr,tc))
                         prev[(tr,tc)] = (r,c)
 
             level += 1
 
-    threshold = -0.5
+    threshold = -0.3
     result = []
+    #note: make threshold a function of q for goated results
     while not result and threshold > -1:
         result = create_path(threshold)
         # print(result,threshold)
-        threshold -= .1
+        threshold -= .5
 
     return result if result else []
 
