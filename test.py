@@ -14,7 +14,7 @@ bot_4_results_file = "bot_4_results.txt"
 winnable_frequency_file = "winnable_f.txt"
 notes = "notes.txt"
 
-random.seed(42) 
+random.seed(14) 
 
 if not os.path.exists(bot_1_results_file):
     num_ships = 50

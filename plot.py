@@ -64,15 +64,16 @@ axes[2].plot(q_values, adj_bot_4_success_rates, marker="x", linestyle="-.", labe
 
 axes[2].set_xlabel("q (Probability of Fire Spread)")
 axes[2].set_ylabel("Success Rate")
-axes[2].set_title("Bot Performance vs. Fire Spread Probability")
+axes[2].set_title("Bot Performance Adjusted for Winnability")
 axes[2].legend()
 axes[2].grid(True)
 axes[2].set_ylim(0.4, 1.1)
 
 # Set x-axis ticks at intervals of 0.05 for both subplots
 for ax in axes:
-    ax.set_xticks(np.arange(0, 1.05, 0.05))
+    ax.set_xticks(np.arange(0, 1.05, 0.1))
     ax.set_yticks(np.arange(0.4, 1.05, 0.1))
+    ax.yaxis.set_tick_params(labelleft=True)  # Ensure y-tick labels are displayed
 
 plt.tight_layout()
 plt.show()

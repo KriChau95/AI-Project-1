@@ -342,6 +342,10 @@ def bot1(info, fire_prog, visualize = False):
         if fire_prog[t][tr][tc] == -1: 
             res = "failure"
             break
+
+        # if button on fire, return failure
+        if fire_prog[t][button[0]][button[1]] == -1:
+            return "failure"
         
         # increment time by 1
         t += 1 
@@ -474,6 +478,7 @@ def bot3(info, fire_prog, visualize = False):
         # increment t by 1 to show we have moved 1 time step forward
         t += 1
 
+
 # Function to visualize probabilistic fire spread map for many valyes of t- used in bot 4
 def visualize_probabilistic_fire(prob_fire_prog, threshold, title="Probabilistic Fire Spread"):
 
@@ -534,9 +539,9 @@ def visualize_probabilistic_fire(prob_fire_prog, threshold, title="Probabilistic
 # Parameters:
 #   info - hashmap containing data about ship - 2D array representation, coords of bot, button, initial fire
 #   prob_fire_prog - a 3D array that is a list of 2D arrays such that represents ships at each time in a specific fire progression
-#   the prob_fire_prog passed in here is a bit different than normal fire_progs, 
-#   because it is a simulation where open cells are not always 0 or -1, but a number between that is reflective of 
-#   how often it is on fire at that specific time stamp based on simulations run inside bot4 method
+#   the prob_fire_prog is different than normal fire_progs; 
+#   created after running 50 simulations, with each cells is a probability the fire will spread there at time t. 
+#
 # Performs a probabalistic breadth first search based on prob_fire_prog and returns a path it thinks will reach the goal without catching on fire
 def probabilistic_search(info, prob_fire_prog):
     
@@ -546,9 +551,9 @@ def probabilistic_search(info, prob_fire_prog):
     button = info['button']
     bot = info['bot']
 
-    # internal helper function that finds a path from start to button using BFS but it only considers
-    # cells that are safe where how safe they are is determined if they are greater than a cutoff threshold
-    # that represents in how many of the simulations they caught on fire at that time
+    # internal helper function that finds a path from start to button using BFS but it only considers safe cells
+    # safe cells determined by whether or not they are greater than a cutoff threshold
+
     def create_path(threshold, offset):
         
         # initialize necessary variables for probabalistic BFS - queue, visited, set, prev hashmap for path reconstruction
@@ -614,6 +619,8 @@ def probabilistic_search(info, prob_fire_prog):
 # Returns "success" if Bot 3 succeeds with its approach on the specific fire progression; "failure" otherwise
 def bot4(info, fire_prog, q, visualize=False):
 
+    button = info['button']
+    
     # samples will store several 3D arrays representing fire progressions
     samples = []
 
@@ -664,6 +671,10 @@ def bot4(info, fire_prog, q, visualize=False):
         if fire_prog[t][tr][tc] == -1:
             res = "failure"
             break
+
+        # if button on fire, return failure
+        if fire_prog[t][button[0]][button[1]] == -1:
+            return "failure"
 
         # increment t by 1 to show that 1 time unit has passed
         t+=1
