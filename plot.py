@@ -79,5 +79,6 @@ for ax in axes:
     ax.set_yticks(np.arange(0.4, 1.05, 0.1))
     ax.yaxis.set_tick_params(labelleft=True)  # Ensure y-tick labels are displayed
 
+# Show the plot
 plt.tight_layout()
 plt.show()
