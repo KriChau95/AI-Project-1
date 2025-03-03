@@ -1,3 +1,6 @@
+# plot.py is used to parse the data stored by test.py in the .txt files, interpret it, and plot it
+
+# import plotting library and numpy
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -10,7 +13,7 @@ def read_results(filename):
             results[float(q)] = int(success_count)
     return results
 
-# Read the results
+# Read the results for each bot and the winnable txt file
 bot_1_results = read_results("bot_1_results.txt")
 bot_2_results = read_results("bot_2_results.txt")
 bot_3_results = read_results("bot_3_results.txt")
@@ -21,14 +24,16 @@ winnability_results = read_results("winnable_f.txt")
 q_values = sorted(bot_1_results.keys())  # Assuming all files have the same q values
 num_ships = bot_1_results[0]  # Total ships used in simulation
 
-# Compute success rates
+# Compute success rates for each bot
 bot_1_success_rates = [bot_1_results[q] / num_ships for q in q_values]
 bot_2_success_rates = [bot_2_results[q] / num_ships for q in q_values]
 bot_3_success_rates = [bot_3_results[q] / num_ships for q in q_values]
 bot_4_success_rates = [bot_4_results[q] / num_ships for q in q_values]
 
+# Compute winnability for each q value
 winnability_rates = [winnability_results[q] / num_ships for q in q_values]
 
+# Compute adjusted success rates based on only factoring in winnable maps
 adj_bot_1_success_rates = [bot_1_results[q] / winnability_results[q] for q in q_values]
 adj_bot_2_success_rates = [bot_2_results[q] / winnability_results[q] for q in q_values]
 adj_bot_3_success_rates = [bot_3_results[q] / winnability_results[q] for q in q_values]
@@ -61,7 +66,6 @@ axes[2].plot(q_values, adj_bot_1_success_rates, marker="o", linestyle="-", label
 axes[2].plot(q_values, adj_bot_2_success_rates, marker="s", linestyle="--", label="Bot 2")
 axes[2].plot(q_values, adj_bot_3_success_rates, marker="^", linestyle=":", label="Bot 3")
 axes[2].plot(q_values, adj_bot_4_success_rates, marker="x", linestyle="-.", label="Bot 4")
-
 axes[2].set_xlabel("q (Probability of Fire Spread)")
 axes[2].set_ylabel("Success Rate")
 axes[2].set_title("Bot Performance Adjusted for Winnability")
