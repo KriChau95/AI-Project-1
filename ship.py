@@ -482,224 +482,115 @@ def bot3(info, fire_prog, visualize):
         # increment t by 1 to show we have moved 1 time step forward
         t += 1
 
-
-# Function to visualize probabilistic fire spread map for many valyes of t- used in bot 4
-def visualize_probabilistic_fire(prob_fire_prog, threshold, title="Probabilistic Fire Spread"):
-
-    # Visualize the fire progression over time based on probability values
-    #   Walls (1) = Black
-    #   Fire (-1) = Red
-    #   Empty cells (0) = White
-    #   Probabilities (0 < x < 1) → Gradient shades of red
-
-    timesteps, d, _ = prob_fire_prog.shape # Extract the number of time steps and grid dimensions
-
-    for t in range(timesteps): # iterate through each time stamp
-        if t == 45:
-            break
-        fig, ax = plt.subplots() # set up subplots
-        img = np.zeros((d, d, 3))  # RGB image
-
-        # looop through each cell in the grid
-        for i in range(d):
-            for j in range(d):
-
-                val = prob_fire_prog[t, i, j] # get probability of fire at that time at that cell
-                
-                # Wall
-                if val == 1:      
-                    img[i, j] = mcolors.to_rgb('black')
-                
-                # Fire
-                elif val == -1:   
-                    img[i, j] = mcolors.to_rgb('red')
-                
-                # Empty
-                elif val == 0:  
-                    img[i, j] = mcolors.to_rgb('white')
-                
-                # Potential Fire
-
-                else:  # Fire probability (-1 < val < 0) (Fire = -1)
-                    
-                    intensity = abs(val)  # 1 at -1, 0 at 0
-                    red = mcolors.to_rgb('red') # (1, 0, 0)
-                    white = mcolors.to_rgb('white') # (1, 1, 1)
-                    
-                    # if cell < threshold - it is dangerous and will be avoided by Bot4
-                    if val < threshold:
-                        img[i, j] = tuple((intensity) * red[k] + (1-intensity) * white[k] for k in range(3)) # display as gradient of red
-                    #if cell >= threshold - bot is willing to gamble on that cell - show as orange
-                    else:
-                        img[i, j] = mcolors.to_rgb('orange')
-
-        # show all the plots at all the times
-        ax.imshow(img, interpolation='nearest')
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.set_title(f"{title} - Step {t}")
-        plt.show()
-
-# helper function for Bot4 that takes in:
+# Bot 4: Adaptive path planning using A* with q-dependent risk heuristic, optimized with NumPy
 # Parameters:
 #   info - hashmap containing data about ship - 2D array representation, coords of bot, button, initial fire
-#   prob_fire_prog - a 3D array that is a list of 2D arrays such that represents ships at each time in a specific fire progression
-#   the prob_fire_prog is different than normal fire_progs; 
-#   created after running 50 simulations, with each cells is a probability the fire will spread there at time t. 
-#
-# Performs a probabalistic breadth first search based on prob_fire_prog and returns a path it thinks will reach the goal without catching on fire
-def probabilistic_search(info, prob_fire_prog):
-    
-    d = len(info['ship'])
-
-    # extract necessary information from info - bot start position and button position tuples
+#   fire_prog - a 3D NumPy array representing the specific fire progression
+#   q - flammability parameter for fire spread probability
+#   visualize - boolean flag for visualization (default False)
+# Returns "success" if Bot 4 reaches the button, "failure" otherwise
+def bot4(info, fire_prog, q, visualize=False):
+    bot_start = info['bot']
     button = info['button']
-    bot = info['bot']
-
-    # internal helper function that finds a path from start to button using BFS but it only considers safe cells
-    # safe cells determined by whether or not they are greater than a cutoff threshold
-    def create_path(threshold, offset):
-        
-        # initialize necessary variables for probabalistic BFS - queue, visited, set, prev hashmap for path reconstruction
-        visited = set()
-        queue = deque()
-        prev = dict()
-        prev[bot] = None
-        level = 0
-
-        # add initial bot position to queue
-        queue.append(info['bot'])
-        
-        # loop through each probabailistic fire map in prob_fire_prog for each time
-        while level<len(prob_fire_prog):
-
-            x = len(queue)
-            
-            for i in range(x):
-                r,c = queue.popleft() # pop everything off current layer in queue
-                
-                # if current pos is equal to button, we found a solution, so we reconstruct path and return it
-                if (r,c) == button:
-                    curr_p = (r,c)
-                    path = deque()
-                    while curr_p != bot:
-                        path.appendleft(curr_p)
-                        curr_p = prev[curr_p]
-                    return list(path).copy()
-
-                # if we have not arrived at button, visit all adjacent cells if they have not already been visited and they are safe enough based on our threshold
-                # offset represents how many time steps in the future we consider in order to manage risk aversion
-                for dr,dc in directions:
-                    tr,tc = r+dr,c+dc
-                    if 0<=tr<d and 0<=tc<d and ((threshold < prob_fire_prog[min(len(prob_fire_prog)-1,level + offset)][tr][tc] <= 0) or prob_fire_prog[level][tr][tc] == -2) and (tr,tc) not in visited:
-                        queue.append((tr,tc)) # add this new cell to queue so we visit its neighbors in next step
-                        visited.add((tr,tc)) # mark this cell as visited
-                        prev[(tr,tc)] = (r,c) # store how we got here using prev dictionary / hashmap
-
-            # increment level by 1
-            level += 1
-
-    # set hyperparameters for probabilistic BFS
-    threshold = -0.4
-    m_dist = abs(button[0] - bot[0]) + abs(button[1] - bot[1])
-    offset = m_dist + 5
-
-    result = []
-
-    # repeatedly try to find a path, but increasing risk tolerance if we cannot find one
-    while not result and threshold >= -1:
-
-        result = create_path(threshold, offset)
-        threshold -= .05
-
-
-    # return result if we find a path
-
-    return result if result else astar(bot,info['ship'],button)
-
-# Bot 4: Based on initial map state and q value, runs many simulations of fire progression and comes up with an average estimated fire_progression
-# based on that estimated fire progression, it tries to find a path using BFS such that each cell it takes is reasonably safe at the time it takes that cell
-# if its threshold is too conservative, it tries again 
-# Parameters:
-#   info - hashmap containing data about ship - 2D array representation, coords of bot, button, initial fire
-#   fire_prog - a 3D array that is a list of 2D arrays such that represents ships at each time in a specific fire progression
-#   visualize - boolean flag that is set to True if we want to visualize ship at different points in Bot1's process; it is False by default
-# Returns "success" if Bot 3 succeeds with its approach on the specific fire progression; "failure" otherwise
-def bot4(info, fire_prog, q, visualize):
-
-    button = info['button']
-    
-    # samples will store several 3D arrays representing fire progressions
-    samples = []
-
-    # number of fire progressions to simulate
-    num_samples = 50
-
-    # stores minimum length of a sample fire progression
-    min_fp_len = float('inf')
-
-    # determines a reasonable cap on how many time steps to simulate a fire progression proportional to the length of the initial A* path from start to end
-    approx_len = len(astar(info['bot'], info['ship'], info['button'])) + 25
-
-    # generate num_samples sample fire progressions - and add to samples
-    for i in range(num_samples):
-        sample_fire_prog = create_fire_prog(copy.deepcopy(info), q, approx_len)
-        min_fp_len = min(min_fp_len, len(sample_fire_prog)) # keeping track of smallest length fire progression
-        samples.append(sample_fire_prog) 
-
-    
-
-    # Truncate all fire progressions to min_fp_len and convert to NumPy array
-    samples = np.array([fp[:min_fp_len] for fp in samples])
-
-    # Replace negative values with 0
-    samples = np.where(samples < -1, 0, samples)
-    samples = np.where(samples > 1, 0, samples)
-
-    # Define probabilistic fire progression as average of 50 fire progressions
-    prob_fire_prog = np.mean(samples, axis=0)
-    firer,firec = info['fire']
-    # print(firer,firec)
-    for i in prob_fire_prog:
-        i[firer,firec] = 1
-    
-    # visualize_ship(info['ship'],None,"visualizing ship in bot4")
-    # visualize_probabilistic_fire(prob_fire_prog,0.0)
-    # get path from probabilistic search method
-    path = probabilistic_search(info, prob_fire_prog)
-
-    # testing if path successful or not
-
-    # initialize time to t = 0
+    ship = np.array(info['ship'], dtype=np.int8)  # Convert to NumPy array once
+    d = ship.shape[0]
+    curr_pos = bot_start
     t = 0
-    
-    # res variable to determine if successful or not
-    res = "success"
 
-    if not path:
-        return "failure", [], prob_fire_prog
-    
-    # loop through each position in the path
-    while t<len(path):    
+    # Precompute direction offsets
+    directions_np = np.array(directions, dtype=np.int32)
+
+    # Helper function to compute risk map with NumPy, adaptive to q
+    def compute_risk_map(fire_map, q):
+        fire_map_np = np.array(fire_map, dtype=np.int8)
+        risk_map = np.full((d, d), 0.0, dtype=np.float32)  # Default to zero risk
+        open_cells = (ship != 1) & (fire_map_np != -1)  # Mask for open, non-burning cells
         
-        if visualize: visualize_ship(fire_prog[t], list(path)[:t+1]) # visualize path if requested
+        # Adjust risk weight based on q (less avoidance for high q)
+        risk_weight = max(5 * (1 - q), 0.1)  # High at low q (5), low at high q (0.1)
+        
+        # Compute distance to nearest fire
+        fire_y, fire_x = np.where(fire_map_np == -1)
+        if len(fire_y) == 0:  # No fire, no risk
+            return risk_map
+        y, x = np.ogrid[:d, :d]
+        dist_map = np.min([np.abs(y - fy) + np.abs(x - fx) for fy, fx in zip(fire_y, fire_x)], axis=0)
+        dist_map[dist_map == 0] = 1e-2  # Avoid division by zero
+        
+        # Simple risk: inversely proportional to distance, scaled by q-dependent weight
+        risk_map[open_cells] = (risk_weight / dist_map)[open_cells]
+        risk_map[~open_cells] = np.inf  # Walls and fire are infinite risk
+        return risk_map
 
-        tr, tc = path[t] # current position stored as tr, tc
+    # Modified A* with q-adaptive heuristic
+    def risk_aware_astar(start, map, button, q):
+        risk_map = compute_risk_map(map, q)
+        
+        def heuristic(cell):
+            r, c = cell
+            base = abs(r - button[0]) + abs(c - button[1])  # Manhattan distance
+            return base + risk_map[r, c]  # Risk contribution shrinks as q increases
 
-        # if we are on fire at the current time, we set res to "failure", break out of loop and return it
-        if fire_prog[t][tr][tc] == -1:
-            res = "failure"
-            break
+        fringe = []
+        heapq.heappush(fringe, (heuristic(start), start))
+        total_costs = {start: 0}
+        prev = {start: None}
+        visited = set()
 
-        # if button on fire, return failure
-        if fire_prog[t][button[0]][button[1]] == -1:
-            return "failure", [], prob_fire_prog
+        while fringe:
+            _, curr = heapq.heappop(fringe)
+            if curr in visited:
+                continue
+            visited.add(curr)
+            if curr == button:
+                path = deque()
+                curr_p = curr
+                while curr_p:
+                    path.appendleft(curr_p)
+                    curr_p = prev[curr_p]
+                return list(path)
 
-        # increment t by 1 to show that 1 time unit has passed
-        t+=1
+            r, c = curr
+            neighbors = [(r + dr, c + dc) for dr, dc in directions_np]
+            valid_neighbors = [(nr, nc) for nr, nc in neighbors if 
+                              0 <= nr < d and 0 <= nc < d and map[nr, nc] != 1 and map[nr, nc] != -1]
 
-    # return both result (success / failure) and path
-    return res, path, prob_fire_prog
+            for child in valid_neighbors:
+                if child in visited:
+                    continue
+                cost = total_costs[curr] + 1
+                est_total_cost = cost + heuristic(child)
+                if child not in total_costs or cost < total_costs[child]:
+                    total_costs[child] = cost
+                    prev[child] = curr
+                    heapq.heappush(fringe, (est_total_cost, child))
+        return []  # No path found
+
+    # Main Bot 4 loop
+    while True:
+        path = risk_aware_astar(curr_pos, fire_prog[t], button, q)
+        if visualize:
+            visualize_ship(fire_prog[t], path, bot4=f"Adaptive Path t={t}, q={q}")
+
+        if not path:
+            return "failure"
+
+        curr_pos = path[1]  # Take the next step
+        r, c = curr_pos
+        if fire_prog[t, r, c] == -1:
+            return "failure"
+
+        br, bc = button
+        if fire_prog[t, br, bc] == -1:
+            return "failure"
+
+        if curr_pos == button:
+            return "success"
+
+        t += 1
+        if t >= len(fire_prog):
+            return "failure"
+        
 
 # Helpful testing function to visualize ship and path
 # Parameters:

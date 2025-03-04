@@ -20,7 +20,7 @@ bot_4_results_file = "bot_4_results.txt"
 winnable_frequency_file = "winnable_f.txt"
 
 # set the random seed
-random.seed(14) 
+random.seed(30) 
 
 # specify number ships to create
 num_ships = 50
@@ -53,7 +53,9 @@ winnability = dict()
 # ships with q = 0 will always be winnable
 winnability[0] = num_ships
 random.seed(20)
-fire_prog = create_fire_prog(copy.deepcopy(ships[34]), 0.45)
+
+
+
 # visualize_ship(ships[34]['ship'], None)
 #bot2(ships[34], fire_prog, visualize=True)
 # bot4(ships[34], fire_prog, q = 0.45, visualize=True)
@@ -118,7 +120,7 @@ for j in range(5, 101, 5):
 
         # test bot 4 for that specific ship and fire progression
         # also pass in q so it can run simulations as part of its methodology
-        res_4, path, prob_fire = bot4(ships[i], fire_prog, q, visualize)
+        res_4 = bot4(ships[i], fire_prog, q, visualize)
 
         # if res_2 == 'failure' and res_4 == 'success':
         #     visualize_ship(ships[i]['ship'], path)
