@@ -217,7 +217,7 @@ def create_fire_prog(info, q, cap = float('inf')):
 def winnable(info,fire_prog):
     
     d = len(info['ship'])
-    
+    button_r,button_c = info['button']
     # initializing important variables for BFS
     visited = set()
     queue = deque()
@@ -226,6 +226,8 @@ def winnable(info,fire_prog):
 
     # running BFS to determine if there was any possible path the bot could have taken to succeed based on this specific fire progression
     while level < len(fire_prog):
+        if fire_prog[level][button_r][button_c] == -1:
+            return False
         x = len(queue)
         for i in range(x):
             r,c = queue.popleft()
@@ -493,7 +495,7 @@ def visualize_probabilistic_fire(prob_fire_prog, threshold, title="Probabilistic
     timesteps, d, _ = prob_fire_prog.shape # Extract the number of time steps and grid dimensions
 
     for t in range(timesteps): # iterate through each time stamp
-        if t == 30:
+        if t == 45:
             break
         fig, ax = plt.subplots() # set up subplots
         img = np.zeros((d, d, 3))  # RGB image
