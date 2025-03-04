@@ -11,6 +11,7 @@ import copy
 
 global directions
 directions = [(0,1), (0,-1), (1,0), (-1,0)] # array to store adjacent directions needed during various traversal
+random.seed(4)
 
 # Initializes the maze with bot, button, fire, and open and closed cells based on an input dimension d - number of rows and columns
 def init_ship(dimension):
@@ -316,7 +317,7 @@ def astar(start, map, button):
 #   fire_prog - a 3D array that is a list of 2D arrays such that represents ships at each time in a specific fire progression
 #   visualize - boolean flag that is set to True if we want to visualize ship at different points in Bot1's process; it is False by default
 # Returns "success" if Bot 1 succeeds on A* computed path based on the specific fire progression; "failure" otherwise
-def bot1(info, fire_prog, visualize = False):
+def bot1(info, fire_prog, visualize):
 
     # extract necessary information from info - bot start position and button position tuples
     bot_start = info['bot']
@@ -360,7 +361,7 @@ def bot1(info, fire_prog, visualize = False):
 #   fire_prog - a 3D array that is a list of 2D arrays such that represents ships at each time in a specific fire progression
 #   visualize - boolean flag that is set to True if we want to visualize ship at different points in Bot1's process; it is False by default
 # Returns "success" if Bot 2 succeeds with its approach on the specific fire progression; "failure" otherwise
-def bot2(info, fire_prog, visualize = False):
+def bot2(info, fire_prog, visualize):
 
     # extract necessary information from info - bot start position and button position tuples
     bot_start = info['bot']
@@ -411,7 +412,7 @@ def bot2(info, fire_prog, visualize = False):
 #   fire_prog - a 3D array that is a list of 2D arrays such that represents ships at each time in a specific fire progression
 #   visualize - boolean flag that is set to True if we want to visualize ship at different points in Bot1's process; it is False by default
 # Returns "success" if Bot 3 succeeds with its approach on the specific fire progression; "failure" otherwise
-def bot3(info, fire_prog, visualize = False):
+def bot3(info, fire_prog, visualize):
 
     # extract necessary information from info - ship 2D array, bot start position, and button position tuples
     bot_start = info['bot']
@@ -492,7 +493,8 @@ def visualize_probabilistic_fire(prob_fire_prog, threshold, title="Probabilistic
     timesteps, d, _ = prob_fire_prog.shape # Extract the number of time steps and grid dimensions
 
     for t in range(timesteps): # iterate through each time stamp
-        
+        if t == 30:
+            break
         fig, ax = plt.subplots() # set up subplots
         img = np.zeros((d, d, 3))  # RGB image
 
@@ -554,7 +556,6 @@ def probabilistic_search(info, prob_fire_prog):
 
     # internal helper function that finds a path from start to button using BFS but it only considers safe cells
     # safe cells determined by whether or not they are greater than a cutoff threshold
-
     def create_path(threshold, offset):
         
         # initialize necessary variables for probabalistic BFS - queue, visited, set, prev hashmap for path reconstruction
@@ -574,7 +575,7 @@ def probabilistic_search(info, prob_fire_prog):
             
             for i in range(x):
                 r,c = queue.popleft() # pop everything off current layer in queue
-
+                
                 # if current pos is equal to button, we found a solution, so we reconstruct path and return it
                 if (r,c) == button:
                     curr_p = (r,c)
@@ -597,18 +598,21 @@ def probabilistic_search(info, prob_fire_prog):
             level += 1
 
     # set hyperparameters for probabilistic BFS
-    threshold = -0.3
-    offset = 26
+    threshold = -0.4
+    offset = 20
 
     result = []
 
     # repeatedly try to find a path, but increasing risk tolerance if we cannot find one
-    while not result and threshold > -1:
+    while not result and threshold >= -1:
+
         result = create_path(threshold, offset)
-        threshold -= .5
+        threshold -= .05
+
 
     # return result if we find a path
-    return result if result else []
+
+    return result if result else astar(bot,info['ship'],button)
 
 # Bot 4: Based on initial map state and q value, runs many simulations of fire progression and comes up with an average estimated fire_progression
 # based on that estimated fire progression, it tries to find a path using BFS such that each cell it takes is reasonably safe at the time it takes that cell
@@ -618,7 +622,7 @@ def probabilistic_search(info, prob_fire_prog):
 #   fire_prog - a 3D array that is a list of 2D arrays such that represents ships at each time in a specific fire progression
 #   visualize - boolean flag that is set to True if we want to visualize ship at different points in Bot1's process; it is False by default
 # Returns "success" if Bot 3 succeeds with its approach on the specific fire progression; "failure" otherwise
-def bot4(info, fire_prog, q, visualize=False):
+def bot4(info, fire_prog, q, visualize):
 
     button = info['button']
     
@@ -640,6 +644,8 @@ def bot4(info, fire_prog, q, visualize=False):
         min_fp_len = min(min_fp_len, len(sample_fire_prog)) # keeping track of smallest length fire progression
         samples.append(sample_fire_prog) 
 
+    
+
     # Truncate all fire progressions to min_fp_len and convert to NumPy array
     samples = np.array([fp[:min_fp_len] for fp in samples])
 
@@ -649,7 +655,13 @@ def bot4(info, fire_prog, q, visualize=False):
 
     # Define probabilistic fire progression as average of 50 fire progressions
     prob_fire_prog = np.mean(samples, axis=0)
-
+    firer,firec = info['fire']
+    # print(firer,firec)
+    for i in prob_fire_prog:
+        i[firer,firec] = 1
+    
+    # visualize_ship(info['ship'],None,"visualizing ship in bot4")
+    # visualize_probabilistic_fire(prob_fire_prog,0.0)
     # get path from probabilistic search method
     path = probabilistic_search(info, prob_fire_prog)
 
@@ -661,6 +673,9 @@ def bot4(info, fire_prog, q, visualize=False):
     # res variable to determine if successful or not
     res = "success"
 
+    if not path:
+        return "failure", [], prob_fire_prog
+    
     # loop through each position in the path
     while t<len(path):    
         
@@ -675,13 +690,13 @@ def bot4(info, fire_prog, q, visualize=False):
 
         # if button on fire, return failure
         if fire_prog[t][button[0]][button[1]] == -1:
-            return "failure"
+            return "failure", [], prob_fire_prog
 
         # increment t by 1 to show that 1 time unit has passed
         t+=1
 
     # return both result (success / failure) and path
-    return res, path
+    return res, path, prob_fire_prog
 
 # Helpful testing function to visualize ship and path
 # Parameters:
@@ -734,11 +749,14 @@ def main():
 
     # Sample test with 40x40 ship, q = 0.65, bot4
     ship_info = init_ship(40)
-    visualize_ship(ship_info['ship'], None, "Bot 2 Failure Case")
+    visualize_ship(ship_info['ship'],None)
+    # ship_info = init_ship(40)
+    # visualize_ship(ship_info['ship'],None)
+    # visualize_ship(ship_info['ship'], None, "Bot 2 Failure Case")
     
-    q = 0.65
-    fire_prog = create_fire_prog(copy.deepcopy(ship_info),q)
-    res = bot2(ship_info, fire_prog, visualize=True)
+    q = 0.50
+    fire_prog = create_fire_prog(copy.deepcopy(ship_info),.45)
+    # print(bot4(ship_info, fire_prog, q=.45, visualize=True))[0]
     # print(res)  
 
 # Run Main

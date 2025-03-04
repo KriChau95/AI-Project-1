@@ -54,11 +54,11 @@ winnability = dict()
 winnability[0] = num_ships
 random.seed(20)
 fire_prog = create_fire_prog(copy.deepcopy(ships[34]), 0.45)
-visualize_ship(ships[34]['ship'], None)
+# visualize_ship(ships[34]['ship'], None)
 #bot2(ships[34], fire_prog, visualize=True)
-bot4(ships[34], fire_prog, q = 0.45, visualize=True)
+# bot4(ships[34], fire_prog, q = 0.45, visualize=True)
 
-exit()
+
 
 # for q = 0.05, 0.10, .. 1.00
 for j in range(5, 101, 5):
@@ -118,17 +118,19 @@ for j in range(5, 101, 5):
 
         # test bot 4 for that specific ship and fire progression
         # also pass in q so it can run simulations as part of its methodology
-        res_4, path = bot4(ships[i], fire_prog, q, visualize)
+        res_4, path, prob_fire = bot4(ships[i], fire_prog, q, visualize)
 
-        if res_2 == 'failure' and res_4 == 'success':
-            visualize_ship(ships[i]['ship'], path)
+        # if res_2 == 'failure' and res_4 == 'success':
+        #     visualize_ship(ships[i]['ship'], path)
 
         # increment bot 4 success count if it succeeded
         if res_4 == 'success':
             bot_4_results[q] += 1
             print("bot 4 subtest n =", i, "success")
         else:
-            print("bot 4 subtest n =", i, "failure")   
+            print("bot 4 subtest n =", i, "failure")  
+            visualize_ship(ships[i]['ship'],path) 
+            visualize_probabilistic_fire(prob_fire,0)
                     
         del fire_prog # to save storage
     
