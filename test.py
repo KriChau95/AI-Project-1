@@ -129,8 +129,8 @@ for j in range(5, 101, 5):
             print("bot 4 subtest n =", i, "success")
         else:
             print("bot 4 subtest n =", i, "failure")  
-            visualize_ship(ships[i]['ship'],path) 
-            visualize_probabilistic_fire(prob_fire,0)
+            #visualize_ship(ships[i]['ship'],path) 
+            #visualize_probabilistic_fire(prob_fire,0)
                     
         del fire_prog # to save storage
     

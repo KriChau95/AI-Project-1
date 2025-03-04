@@ -601,7 +601,8 @@ def probabilistic_search(info, prob_fire_prog):
 
     # set hyperparameters for probabilistic BFS
     threshold = -0.4
-    offset = 20
+    m_dist = abs(button[0] - bot[0]) + abs(button[1] - bot[1])
+    offset = m_dist + 5
 
     result = []
 
