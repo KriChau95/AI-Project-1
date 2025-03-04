@@ -324,6 +324,7 @@ def bot1(info, fire_prog, visualize = False):
 
     # calculate and store A* path from bot start position to button position
     path = astar(bot_start, info['ship'], button)
+    if visualize: visualize_ship(fire_prog[0], list(path))
     
     # initialize t = 0 to represent time state
     t = 0
@@ -337,7 +338,7 @@ def bot1(info, fire_prog, visualize = False):
         if visualize: visualize_ship(fire_prog[t], list(path)[:t+1]) # visualize path if requested
 
         tr, tc = path[t] # tr, tc represents row and column at curr time step
-        
+
         # if cell at current time step is on fire in the simulated fire_prog at the corresponding time_step, fire has spread to our bot and we have failed
         if fire_prog[t][tr][tc] == -1: 
             res = "failure"
@@ -729,12 +730,16 @@ def visualize_ship(ship, path, title = ""):
 # Main for testing
 def main():
 
+    random.seed(26)
+
     # Sample test with 40x40 ship, q = 0.65, bot4
     ship_info = init_ship(40)
+    visualize_ship(ship_info['ship'], None, "Bot 2 Failure Case")
+    
     q = 0.65
     fire_prog = create_fire_prog(copy.deepcopy(ship_info),q)
-    res = bot4(ship_info, fire_prog, q, visualize=True)
-    print(res)  
+    res = bot2(ship_info, fire_prog, visualize=True)
+    # print(res)  
 
 # Run Main
 if __name__ == "__main__":
