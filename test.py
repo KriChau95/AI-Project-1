@@ -23,7 +23,8 @@ winnable_frequency_file = "winnable_f.txt"
 random.seed(30) 
 
 # specify number ships to create
-num_ships = 50
+num_ships = 20
+num_fire_prog = 5
 
 # initialize array to store num_ships ships
 ships = []
@@ -42,16 +43,16 @@ bot_3_results = defaultdict(int)
 bot_4_results = defaultdict(int)
 
 # all bots will always be successful when q = 0 - fire never spreads
-bot_1_results[0] = num_ships
-bot_2_results[0] = num_ships
-bot_3_results[0] = num_ships
-bot_4_results[0] = num_ships
+bot_1_results[0] = num_ships * num_fire_prog
+bot_2_results[0] = num_ships * num_fire_prog
+bot_3_results[0] = num_ships * num_fire_prog
+bot_4_results[0] = num_ships * num_fire_prog
 
 # create a dictionary to store winnability - keep track of how many of the ships are winnable based on the fire progression
 winnability = dict()
 
 # ships with q = 0 will always be winnable
-winnability[0] = num_ships
+winnability[0] = num_ships * num_fire_prog
 random.seed(20)
 
 
@@ -74,68 +75,76 @@ for j in range(5, 101, 5):
 
     # for each ship
     for i in range(len(ships)):
-
         visualize = False # flag to determine if we want to visualize certain ships
 
-        # create a 3D array fire progression based on our current ship and q value and store it
-        fire_prog = create_fire_prog(copy.deepcopy(ships[i]), q)
+        for progi in range(num_fire_prog):   
+            # print(f"testing ship{i} fireprog {progi} with q={q}")
+            # create a 3D array fire progression based on our current ship and q value and store it
+            fire_prog = create_fire_prog(copy.deepcopy(ships[i]), q)
 
-        # determine if ship was winnable based on that fire_prog and increment fire_prog accordingly
-        if winnable(ships[i], fire_prog):
-            num_winnable += 1
-        else:
-            del fire_prog # saves storage
-            continue # if ship is unwinnable, skip to next iteration without incrementing bots' success hashmaps
-        
-        # test bot 1 for that specific ship and fire progression
-        res_1 = bot1(ships[i], fire_prog, False)
-        
-        # increment bot 1 success count if it succeeded
-        if res_1 == 'success':
-            bot_1_results[q] += 1
-            print("bot 1 subtest n =", i, "success")
-        else:
-            print("bot 1 subtest n =", i, "failure")
-        
-        # test bot 2 for that specific ship and fire progression
-        res_2 = bot2(ships[i], fire_prog, visualize)
+            # determine if ship was winnable based on that fire_prog and increment fire_prog accordingly
+            ship_winnable, winnable_path = winnable(ships[i], fire_prog)
 
-        # increment bot 2 success count if it succeeded
-        if res_2 == 'success':
-            bot_2_results[q] += 1
-            print("bot 2 subtest n =", i, "success")
-        else:
-            print("bot 2 subtest n =", i, "failure")
+            if ship_winnable:
+                num_winnable += 1
+            else:
+                del fire_prog # saves storage
+                continue # if ship is unwinnable, skip to next iteration without incrementing bots' success hashmaps
+            
+            # test bot 1 for that specific ship and fire progression
+            res_1 = bot1(ships[i], fire_prog, False)
+            
+            # increment bot 1 success count if it succeeded
+            if res_1 == 'success':
+                bot_1_results[q] += 1
+                # print("bot 1 subtest n =", i, "success")
+            else:
+                # print("bot 1 subtest n =", i, "failure")
+                pass
+            
+            # test bot 2 for that specific ship and fire progression
+            res_2 = bot2(ships[i], fire_prog, visualize)
 
-        # test bot 3 for that specific ship and fire progression
-        res_3 = bot3(ships[i], fire_prog, visualize)
+            # increment bot 2 success count if it succeeded
+            if res_2 == 'success':
+                bot_2_results[q] += 1
+                # print("bot 2 subtest n =", i, "success")
+            else:
+                # print("bot 2 subtest n =", i, "failure")
+                pass
 
-        # increment bot 3 success count if it succeeded
-        if res_3 == 'success':
-            bot_3_results[q] += 1
-            print("bot 3 subtest n =", i, "success")
-        else:
-            print("bot 3 subtest n =", i, "failure")
+            # test bot 3 for that specific ship and fire progression
+            res_3 = bot3(ships[i], fire_prog, visualize)
+
+            # increment bot 3 success count if it succeeded
+            if res_3 == 'success':
+                bot_3_results[q] += 1
+                # print("bot 3 subtest n =", i, "success")
+            else:
+                # print("bot 3 subtest n =", i, "failure")
+                pass
 
 
-        # test bot 4 for that specific ship and fire progression
-        # also pass in q so it can run simulations as part of its methodology
-        res_4 = bot4(ships[i], fire_prog, q, visualize)
+            # test bot 4 for that specific ship and fire progression
+            # also pass in q so it can run simulations as part of its methodology
+            res_4,path = bot4(ships[i], fire_prog, q, visualize)
 
-        # if res_2 == 'failure' and res_4 == 'success':
-        #     visualize_ship(ships[i]['ship'], path)
+            # if res_2 == 'failure' and res_4 == 'success':
+            #     visualize_ship(ships[i]['ship'], path)
 
-        # increment bot 4 success count if it succeeded
-        if res_4 == 'success':
-            bot_4_results[q] += 1
-            print("bot 4 subtest n =", i, "success")
-        else:
-            print("bot 4 subtest n =", i, "failure")  
-            #visualize_ship(ships[i]['ship'],path) 
-            #visualize_probabilistic_fire(prob_fire,0)
-                    
-        del fire_prog # to save storage
-    
+            # increment bot 4 success count if it succeeded
+            if res_4 == 'success':
+                bot_4_results[q] += 1
+                # print("bot 4 subtest n =", i, "success")
+            else:            # 
+
+                print(f"bot 4 failure for ship{i} fireprog {progi} and q={q}")  
+                # for t in range(len(winnable_path)):
+                #     visualize_ship(fire_prog[t],winnable_path[0:t+1])
+                # for t in range(len(path)):
+                #     visualize_ship(fire_prog[t],path[0:t+1]) 
+                        
+            del fire_prog # to save storage
     # update winnability of q to store number of winnable simulations for that specific q
     winnability[q] = num_winnable
 

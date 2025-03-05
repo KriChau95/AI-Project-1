@@ -11,7 +11,7 @@ import copy
 
 global directions
 directions = [(0,1), (0,-1), (1,0), (-1,0)] # array to store adjacent directions needed during various traversal
-random.seed(4)
+random.seed(30)
 
 # Initializes the maze with bot, button, fire, and open and closed cells based on an input dimension d - number of rows and columns
 def init_ship(dimension):
@@ -154,7 +154,7 @@ def create_fire_prog(info, q, cap = float('inf')):
     
     ship = info['ship'] # initial 2D representation of ship
     fire_q = info['fire_q'] # fire's open neighbors at time t = 0
-
+    br,bc = info['button']
     # convert ship to numpy array for convenience and easier terminal visualizations
     temp = np.array(ship) 
     temp = temp.reshape(1, 40, 40) 
@@ -166,7 +166,8 @@ def create_fire_prog(info, q, cap = float('inf')):
 
     # expand fire either until ship is filled, or we have advanced and time passed = cap
     while fire_q and time_counter < cap: 
-
+        if (ship[br][bc] == -1):
+            break
         time_counter += 1 # increment time by 1
         
         # BFS-like simulation of fire spread
@@ -214,36 +215,54 @@ def create_fire_prog(info, q, cap = float('inf')):
 # info - hashmap/dictionary that contains all important ship information - 2D array representing ship, tuples representing bot, button, and initial fire position
 # fire_prog - a 3D array that is a list of 2D arrays such that represents ships at each time in a specific fire progression
 # returns True if it is possible for the bot to reach the button given this specific fire progression, False otherwise
-def winnable(info,fire_prog):
-    
-    d = len(info['ship'])
-    button_r,button_c = info['button']
-    # initializing important variables for BFS
-    visited = set()
-    queue = deque()
-    level = 0
-    queue.append(info['bot'])
+def winnable(info, fire_prog):
+    d = len(info['ship'])  # Size of the grid
+    button_r, button_c = info['button']  # Button’s position
+    ship = info['ship']  # The ship map: 1 = wall, 0 = open, etc.
 
-    # running BFS to determine if there was any possible path the bot could have taken to succeed based on this specific fire progression
+    # Set up BFS
+    visited = set()  # Spots we’ve checked
+    queue = deque()  # Queue to explore spots
+    level = 0  # Current time step
+    start = info['bot']  # Starting position
+    queue.append(start)
+    visited.add(start)
+    prev = {start: None}  # Track where we came from for the path
+
+    # Run BFS to see if we can reach the button
     while level < len(fire_prog):
-        if fire_prog[level][button_r][button_c] == -1:
-            return False
-        x = len(queue)
-        for i in range(x):
-            r,c = queue.popleft()
-            if fire_prog[level][r][c] == -2: # if both reaches button, return True
-                return True
+        if fire_prog[level][button_r][button_c] == -1:  # Button’s on fire
+            return False, []  # Can’t win, no path
+        
+        # Explore all spots reachable at this time step
+        for _ in range(len(queue)):  # Number of spots at this level
+            r, c = queue.popleft()  # Current position
+            if (r, c) == (button_r, button_c):  # Reached the button!
+                # Build the path backward from button to start
+                path = []
+                curr = (r, c)
+                while curr is not None:
+                    path.insert(0, curr)  # Add each step to the front
+                    curr = prev[curr]  # Move to previous spot
+                return True, path  # Winnable, here’s the path
 
-            # visit all adjacent cells and check if it is possible to reach them at that time step without catching on fire
-            for dr,dc in directions:
-                tr,tc = r+dr,c+dc
-                if 0<=tr<d and 0<=tc<d and (fire_prog[level][tr][tc] == 0 or fire_prog[level][tr][tc] == -2) and (tr,tc) not in visited:
-                    queue.append((tr,tc))
-                    visited.add((tr,tc))
-        # increment level to represent one time unit has advanced
-        level += 1
+            # Check all four directions
+            for dr, dc in directions:
+                tr, tc = r + dr, c + dc  # Target position
+                # In bounds, not a wall, not fire, and not visited?
+                if (0 <= tr < d and 0 <= tc < d and 
+                    ship[tr][tc] != 1 and  # Explicitly check for walls
+                    fire_prog[level][tr][tc] != -1 and  # Not fire
+                    (tr, tc) not in visited):
+
+                    
+                    queue.append((tr, tc))  # Add to explore
+                    visited.add((tr, tc))  # Mark as visited
+                    prev[(tr, tc)] = (r, c)  # Remember where we came from
+        
+        level += 1  # Next time step
     
-    return False
+    return False, []  # Ran out of time or no path
   
 # A* search algorithm implementation that takes in:
 # start - tuple of (start row, start col) of where to start search
@@ -489,108 +508,147 @@ def bot3(info, fire_prog, visualize):
 #   q - flammability parameter for fire spread probability
 #   visualize - boolean flag for visualization (default False)
 # Returns "success" if Bot 4 reaches the button, "failure" otherwise
+        
 def bot4(info, fire_prog, q, visualize=False):
-    bot_start = info['bot']
-    button = info['button']
-    ship = np.array(info['ship'], dtype=np.int8)  # Convert to NumPy array once
-    d = ship.shape[0]
-    curr_pos = bot_start
-    t = 0
+    bot_start = info['bot']  # Where the bot begins (row, column)
+    button = info['button']  # Where the button is (row, column)
+    ship = np.array(info['ship'])  # The ship map: 1 = wall, 0 = open
 
-    # Precompute direction offsets
-    directions_np = np.array(directions, dtype=np.int32)
+    d = ship.shape[0]  # Size of the grid (d rows and d columns)
+    curr_pos = bot_start  # Bot’s current position, starts at bot_start
 
-    # Helper function to compute risk map with NumPy, adaptive to q
-    def compute_risk_map(fire_map, q):
-        fire_map_np = np.array(fire_map, dtype=np.int8)
-        risk_map = np.full((d, d), 0.0, dtype=np.float32)  # Default to zero risk
-        open_cells = (ship != 1) & (fire_map_np != -1)  # Mask for open, non-burning cells
-        
-        # Adjust risk weight based on q (less avoidance for high q)
-        risk_weight = max(5 * (1 - q), 0.1)  # High at low q (5), low at high q (0.1)
-        
-        # Compute distance to nearest fire
-        fire_y, fire_x = np.where(fire_map_np == -1)
-        if len(fire_y) == 0:  # No fire, no risk
+    t = 0  # Time step, tracks how far we are in the fire’s spread
+    directions = [(-1, 0), (0, 1), (1, 0), (0, -1)]  # Possible moves: up, right, down, left
+    
+    final_path = []  # Store the bot’s path for return
+
+    def create_risk_map(fire_map, q):
+
+        risk_map = np.zeros((d, d))  # Start with a grid of zeros
+        fire_map_np = np.array(fire_map)
+
+        open_cells = (ship != 1) & (fire_map_np != -1)  # Safe spots (not walls, not fire)
+        blocked_cells = (ship == 1) | (fire_map_np == -1)  # Blocked spots (walls or fire)
+
+        risk_weight = 0.1  
+
+        fire_locations = [(r, c) for r in range(d) for c in range(d) if fire_map_np[r, c] == -1]
+        if not fire_locations:
             return risk_map
-        y, x = np.ogrid[:d, :d]
-        dist_map = np.min([np.abs(y - fy) + np.abs(x - fx) for fy, fx in zip(fire_y, fire_x)], axis=0)
-        dist_map[dist_map == 0] = 1e-2  # Avoid division by zero
-        
-        # Simple risk: inversely proportional to distance, scaled by q-dependent weight
-        risk_map[open_cells] = (risk_weight / dist_map)[open_cells]
-        risk_map[~open_cells] = np.inf  # Walls and fire are infinite risk
+
+        for r in range(d):
+                for c in range(d):
+                    if open_cells[r, c]:
+                        min_dist = float('inf')
+                        for fr, fc in fire_locations:
+                            dist = abs(r - fr) + abs(c - fc)
+                            if dist < min_dist:
+                                min_dist = dist
+                        if min_dist == 0:
+                            min_dist = 0.01  # Avoid divide-by-zero
+                        risk_map[r, c] = risk_weight / min_dist 
+
+        else:  # Medium to high q: use current risk-averse approach
+
+            risk_weight = max(5 * (1 - q), 0.1)  # High risk weight
+            fire_locations = [(r, c) for r in range(d) for c in range(d) if fire_map_np[r, c] == -1]
+            if not fire_locations:
+                return risk_map
+
+            for r in range(d):
+                for c in range(d):
+                    if open_cells[r, c]:
+                        min_dist = float('inf')
+                        for fr, fc in fire_locations:
+                            dist = abs(r - fr) + abs(c - fc)
+                            if dist < min_dist:
+                                min_dist = dist
+                        if min_dist == 0:
+                            min_dist = 0.01  # Avoid divide-by-zero
+                        risk_map[r, c] = risk_weight / min_dist  # Higher risk if closer to fire
+
+        for r in range(d):
+            for c in range(d):
+                if blocked_cells[r, c]:
+                    risk_map[r, c] = float('inf')  # Can’t go here
+
         return risk_map
 
-    # Modified A* with q-adaptive heuristic
     def risk_aware_astar(start, map, button, q):
-        risk_map = compute_risk_map(map, q)
-        
+        risk_map = create_risk_map(map, q)
+
         def heuristic(cell):
             r, c = cell
-            base = abs(r - button[0]) + abs(c - button[1])  # Manhattan distance
-            return base + risk_map[r, c]  # Risk contribution shrinks as q increases
+            distance = abs(r - button[0]) + abs(c - button[1])  # Manhattan distance to button
+            if q < 0.3:  # Low q: prioritize distance more, risk less
+                risk_factor = 0.1  # Lower risk impact for longer, safer paths
+            elif q<.7:
+                risk_factor = 0.2
+            else:  # High q: prioritize risk more
+                risk_factor = 1.0  # Higher risk impact for quick avoidance
+            return distance + risk_factor * risk_map[r, c]  # Balance distance and risk
 
         fringe = []
-        heapq.heappush(fringe, (heuristic(start), start))
-        total_costs = {start: 0}
-        prev = {start: None}
-        visited = set()
+        heapq.heappush(fringe, (heuristic(start), start))  # Start with our position
+        total_costs = {start: 0}  # Steps to reach each spot (0 at start)
+        prev = {start: None}  # Tracks where we came from to build the path
+        visited = set()  # Spots we’ve already checked
 
         while fringe:
-            _, curr = heapq.heappop(fringe)
+            _, curr = heapq.heappop(fringe)  # Get the next spot with lowest score
             if curr in visited:
-                continue
-            visited.add(curr)
-            if curr == button:
-                path = deque()
+                continue  # Skip if we’ve been here
+            visited.add(curr)  # Mark it as checked
+            if curr == button:  # We found the button!
+                path = []  # Build the path backward
                 curr_p = curr
                 while curr_p:
-                    path.appendleft(curr_p)
-                    curr_p = prev[curr_p]
-                return list(path)
+                    path.insert(0, curr_p)  # Add each step to the front
+                    curr_p = prev[curr_p]  # Go to the previous spot
+                return path
 
-            r, c = curr
-            neighbors = [(r + dr, c + dc) for dr, dc in directions_np]
-            valid_neighbors = [(nr, nc) for nr, nc in neighbors if 
-                              0 <= nr < d and 0 <= nc < d and map[nr, nc] != 1 and map[nr, nc] != -1]
+            r, c = curr  # Current row and column
+            # Try moving in all four directions
+            for dr, dc in directions:
+                nr, nc = r + dr, c + dc  # New position after moving
+                # Check if it’s valid: in bounds, not a wall, not fire
+                if 0 <= nr < d and 0 <= nc < d and map[nr, nc] != 1 and map[nr, nc] != -1:
+                    child = (nr, nc)  # The new spot we’re looking at
+                    if child in visited:
+                        continue  # Skip if already checked
+                    cost = total_costs[curr] + 1  # One more step from here
+                    if child not in total_costs or cost < total_costs[child]:
+                        total_costs[child] = cost  # Update steps to reach this spot
+                        prev[child] = curr  # Remember we came from curr
+                        est_total_cost = cost + heuristic(child)  # Total score with guess
+                        heapq.heappush(fringe, (est_total_cost, child))  # Add to queue
+        return []  # No path found, we’re stuck
 
-            for child in valid_neighbors:
-                if child in visited:
-                    continue
-                cost = total_costs[curr] + 1
-                est_total_cost = cost + heuristic(child)
-                if child not in total_costs or cost < total_costs[child]:
-                    total_costs[child] = cost
-                    prev[child] = curr
-                    heapq.heappush(fringe, (est_total_cost, child))
-        return []  # No path found
-
-    # Main Bot 4 loop
+    # Main Loop: Bot’s Adventure
     while True:
         path = risk_aware_astar(curr_pos, fire_prog[t], button, q)
         if visualize:
             visualize_ship(fire_prog[t], path, bot4=f"Adaptive Path t={t}, q={q}")
 
-        if not path:
-            return "failure"
+        if not path:  # No path means we can’t get to the button
+            return "failure", final_path
 
-        curr_pos = path[1]  # Take the next step
-        r, c = curr_pos
-        if fire_prog[t, r, c] == -1:
-            return "failure"
+        curr_pos = path[1]  # Move to the next spot in the path
+        final_path.append(curr_pos)
+        r, c = curr_pos  # New row and column
+        if fire_prog[t, r, c] == -1:  # We stepped into fire—game over!
+            return "failure", final_path
 
-        br, bc = button
-        if fire_prog[t, br, bc] == -1:
-            return "failure"
+        br, bc = button  # Button’s position
+        if fire_prog[t, br, bc] == -1:  # Button’s burning, can’t press it
+            return "failure", final_path
 
-        if curr_pos == button:
-            return "success"
+        if curr_pos == button:  # We reached the button—yay!
+            return "success", final_path
 
-        t += 1
-        if t >= len(fire_prog):
-            return "failure"
-        
+        t += 1  # Move to the next time step
+        if t >= len(fire_prog):  # Ran out of time, fire wins
+            return "failure", final_path
 
 # Helpful testing function to visualize ship and path
 # Parameters:
