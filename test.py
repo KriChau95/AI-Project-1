@@ -55,14 +55,6 @@ winnability = dict()
 winnability[0] = num_ships * num_fire_prog
 random.seed(20)
 
-
-
-# visualize_ship(ships[34]['ship'], None)
-#bot2(ships[34], fire_prog, visualize=True)
-# bot4(ships[34], fire_prog, q = 0.45, visualize=True)
-
-
-
 # for q = 0.05, 0.10, .. 1.00
 for j in range(5, 101, 5):
 

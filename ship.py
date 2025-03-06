@@ -380,7 +380,7 @@ def bot1(info, fire_prog, visualize):
 # Parameters:
 #   info - hashmap containing data about ship - 2D array representation, coords of bot, button, initial fire
 #   fire_prog - a 3D array that is a list of 2D arrays such that represents ships at each time in a specific fire progression
-#   visualize - boolean flag that is set to True if we want to visualize ship at different points in Bot1's process; it is False by default
+#   visualize - boolean flag that is set to True if we want to visualize ship at different points in Bot 2's process; it is False by default
 # Returns "success" if Bot 2 succeeds with its approach on the specific fire progression; "failure" otherwise
 def bot2(info, fire_prog, visualize):
 
@@ -431,7 +431,7 @@ def bot2(info, fire_prog, visualize):
 # Parameters:
 #   info - hashmap containing data about ship - 2D array representation, coords of bot, button, initial fire
 #   fire_prog - a 3D array that is a list of 2D arrays such that represents ships at each time in a specific fire progression
-#   visualize - boolean flag that is set to True if we want to visualize ship at different points in Bot1's process; it is False by default
+#   visualize - boolean flag that is set to True if we want to visualize ship at different points in Bot 2's process; it is False by default
 # Returns "success" if Bot 3 succeeds with its approach on the specific fire progression; "failure" otherwise
 def bot3(info, fire_prog, visualize):
 
@@ -505,10 +505,10 @@ def bot3(info, fire_prog, visualize):
 #   - new heuristic is "risk", and risk is defined per cell as (.1 / minimum disance away from fire)
 #
 # Parameters:
-#   info - hashmap containing data about ship - 2D array representation, coords of bot, button, initial fire
+#   info - hashmap containing data about ship - 2D array representation, coordinatess of bot, button, initial fire
 #   fire_prog - a 3D array that is a list of 2D arrays such that represents ships at each time in a specific fire progression
 #   q - flammability parameter for fire spread probability
-#   visualize - boolean flag that is set to True if we want to visualize ship at different points in Bot1's process; it is False by default
+#   visualize - boolean flag that is set to True if we want to visualize ship at different points in Bot 4's process; it is False by default
 # Returns "success" if Bot 4 reaches the button, "failure" otherwise
         
 def bot4(info, fire_prog, q, visualize=False):
@@ -517,8 +517,7 @@ def bot4(info, fire_prog, q, visualize=False):
     bot_start = info['bot']  
     button = info['button']  
     ship = np.array(info['ship']) 
-
-    d = ship.shape[0]  
+    d = len(ship) 
 
     # store current bot position
     curr_pos = bot_start 
@@ -526,63 +525,65 @@ def bot4(info, fire_prog, q, visualize=False):
     # current time is 0
     t = 0  
 
-    #path for robot to take
+    # path for robot to take
     final_path = []  
 
-    #creates the risk map to be used as heuristic
+    # creates the risk map to help compute the heuristic
     def create_risk_map(fire_map, q):
-        #initialize riskmap
+        
+        # initialize risk map and fire map
         risk_map = np.zeros((d, d))  
-        fire_map_np = np.array(fire_map)
+        fire_map = np.array(fire_map)
 
-        # Define 2 arrays: Safe spots (no walls or fire) and Blocked spots (walls or fire)
-        open_cells = (ship != 1) & (fire_map_np != -1)  
-        blocked_cells = (ship == 1) | (fire_map_np == -1)  
+        # Define 2D Arrays
+        # cells with no wall and no fire are considered open
+        # cells with wall or fire are considered 
 
         # locations of fire
-        fire_locations = [(r, c) for r in range(d) for c in range(d) if fire_map_np[r, c] == -1]
-        if not fire_locations:
-            return risk_map
-
-        # calculate risk map
-        for r in range(d):
-                for c in range(d):
-                    if open_cells[r, c]:
-                        min_dist = float('inf')
-                        for fr, fc in fire_locations:
-                            dist = abs(r - fr) + abs(c - fc)
-                            if dist < min_dist:
-                                min_dist = dist
-                        if min_dist == 0:
-                            min_dist = 0.01  # Avoid divide-by-zero
-                        risk_map[r, c] = (.1 / min_dist )
-
-        # define blocked cells are infinite danger
+        fire_locations = []
         for r in range(d):
             for c in range(d):
-                if blocked_cells[r, c]:
-                    risk_map[r, c] = float('inf')  # Can’t go here
+                if fire_map[r][c] == -1:
+                    fire_locations.append((r,c))
 
+        # calculate risk map - based on Manhattan distance to nearest fire cell
+        for r in range(d):
+            for c in range(d):
+                if ship[r][c] != -1 and ship[r][c] != 1: # checking if open cell
+                    min_dist = float('inf')
+                    for fr, fc in fire_locations: # determine fire cell that is closest, where closeness is defined by Manhattan Distance
+                        dist = abs(r - fr) + abs(c - fc)
+                        min_dist = min(min_dist, dist)
+                    if min_dist == 0:
+                        min_dist = 0.01  # Avoid divide-by-zero
+                    risk_map[r][c] = (.1 / min_dist )
+
+                if ship[r][c] == 1 or fire_map[r][c] == -1:
+                    risk_map[r][c] = float('inf')  # Can’t go here
+
+        
         return risk_map
 
 
-    #modified A* to use our new heuristic
+    # modified A* to use our new heuristic
     def astar_with_risk_heuristic(start, map, button, q):
+
+        # set up risk map using our method
         risk_map = create_risk_map(map, q)
 
+        # define heuristic for a specific cell
         def heuristic(cell):
             r, c = cell
             distance = abs(r - button[0]) + abs(c - button[1]) 
             if q < 0.3:  
                 risk_factor = 0.1 
-            elif q<.7:
+            elif q < 0.7:
                 risk_factor = 0.5
             else: 
                 risk_factor = 1.0  
             
             # Balance distance and risk
             return distance + risk_factor * risk_map[r, c]  
-
 
         # initializing useful variables for A*
         fringe = []
@@ -596,12 +597,12 @@ def bot4(info, fire_prog, q, visualize=False):
 
             cost, curr = heapq.heappop(fringe)  
 
-            #check if we visited current cell
+            # check if we visited current cell
             if curr in visited:
                 continue 
             visited.add(curr)  
 
-            #if goal we found path
+            # if goal we found path
             if curr == button: 
                 path = []  
                 curr_p = curr
@@ -610,12 +611,12 @@ def bot4(info, fire_prog, q, visualize=False):
                     curr_p = prev[curr_p]  
                 return path
 
-            #if not, check neighbors of current cell
+            # if not, check neighbors of current cell
             r, c = curr  
             for dr, dc in directions:
                 nr, nc = r + dr, c + dc  
 
-                if 0 <= nr < d and 0 <= nc < d and map[nr, nc] != 1 and map[nr, nc] != -1:
+                if 0 <= nr < d and 0 <= nc < d and map[nr][nc] != 1 and map[nr][nc] != -1:
                     child = (nr, nc)  
                     if child in visited:
                         continue  
@@ -624,7 +625,7 @@ def bot4(info, fire_prog, q, visualize=False):
                         total_costs[child] = cost 
                         prev[child] = curr  
                         est_total_cost = cost + heuristic(child)  
-                        #push to heap the cost of going to that node and its location
+                        # push to heap the cost of going to that node and its location
                         heapq.heappush(fringe, (est_total_cost, child))
         return []  
 
@@ -634,7 +635,7 @@ def bot4(info, fire_prog, q, visualize=False):
         path = astar_with_risk_heuristic(curr_pos, fire_prog[t], button, q)
 
         if visualize:
-            visualize_ship(fire_prog[t], path, bot4=f"Adaptive Path t={t}, q={q}")
+            visualize_ship(fire_prog[t], path, title=f"Adaptive Path t={t}, q={q}")
 
         # No path means we can’t get to the button
         if not path:  
@@ -645,12 +646,12 @@ def bot4(info, fire_prog, q, visualize=False):
         r, c = curr_pos  
 
         # if bot on fire, we lose
-        if fire_prog[t, r, c] == -1:
+        if fire_prog[t][r][c] == -1:
             return "failure", final_path
 
         # if button on fire, we lose
         br, bc = button  
-        if fire_prog[t, br, bc] == -1:  
+        if fire_prog[t][br][bc] == -1:  
             return "failure", final_path
 
         # win condition
@@ -686,13 +687,13 @@ def visualize_ship(ship, path, title = ""):
     # loop through the ship 2D array and set the corresponding color based on the value in the array and the color_map
     for i in range(d):
         for j in range(d):
-            img[i, j] = mcolors.to_rgb(color_map[ship[i][j]])  
+            img[i][j] = mcolors.to_rgb(color_map[ship[i][j]])  
     
     # display the path by coloring in all cells from start of path to end of path orange
     if path is not None:
         for i in range(len(path)):
             r, c = path[i]
-            img [r, c] = mcolors.to_rgb('orange')
+            img[r][c] = mcolors.to_rgb('orange')
 
     # display the graph
     plt.imshow(img, interpolation='nearest')
@@ -720,7 +721,7 @@ def main():
     
     q = 0.50
     fire_prog = create_fire_prog(copy.deepcopy(ship_info),.45)
-    # print(bot4(ship_info, fire_prog, q=.45, visualize=True))[0]
+    print(bot4(ship_info, fire_prog, q=.45, visualize=True))[0]
     # print(res)  
 
 # Run Main

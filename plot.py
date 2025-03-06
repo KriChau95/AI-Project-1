@@ -57,6 +57,7 @@ axes[0].set_ylim(0.3, 1.1)
 # Second subplot: Winnability
 axes[1].plot(q_values, winnability_rates, marker="d", linestyle="-", color="black", label="Winnability")
 axes[1].set_xlabel("q (Probability of Fire Spread)")
+axes[1].set_ylabel("Winnable Rate")
 axes[1].set_title("Overall Winnability vs. Fire Spread Probability")
 axes[1].legend()
 axes[1].grid(True)
