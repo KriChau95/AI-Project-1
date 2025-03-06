@@ -501,41 +501,50 @@ def bot3(info, fire_prog, visualize):
         # increment t by 1 to show we have moved 1 time step forward
         t += 1
 
-# Bot 4: Adaptive path planning using A* with q-dependent risk heuristic, optimized with NumPy
+### Bot 4: Adaptive path planning using A* with an extra heuristic:
+#   - new heuristic is "risk", and risk is defined per cell as (.1 / minimum disance away from fire)
+#
 # Parameters:
 #   info - hashmap containing data about ship - 2D array representation, coords of bot, button, initial fire
-#   fire_prog - a 3D NumPy array representing the specific fire progression
+#   fire_prog - a 3D array that is a list of 2D arrays such that represents ships at each time in a specific fire progression
 #   q - flammability parameter for fire spread probability
-#   visualize - boolean flag for visualization (default False)
+#   visualize - boolean flag that is set to True if we want to visualize ship at different points in Bot1's process; it is False by default
 # Returns "success" if Bot 4 reaches the button, "failure" otherwise
         
 def bot4(info, fire_prog, q, visualize=False):
-    bot_start = info['bot']  # Where the bot begins (row, column)
-    button = info['button']  # Where the button is (row, column)
-    ship = np.array(info['ship'])  # The ship map: 1 = wall, 0 = open
 
-    d = ship.shape[0]  # Size of the grid (d rows and d columns)
-    curr_pos = bot_start  # Bot’s current position, starts at bot_start
+    # extract necessary information from info - ship 2D array, bot start position, and button position tuples
+    bot_start = info['bot']  
+    button = info['button']  
+    ship = np.array(info['ship']) 
 
-    t = 0  # Time step, tracks how far we are in the fire’s spread
-    directions = [(-1, 0), (0, 1), (1, 0), (0, -1)]  # Possible moves: up, right, down, left
-    
-    final_path = []  # Store the bot’s path for return
+    d = ship.shape[0]  
 
+    # store current bot position
+    curr_pos = bot_start 
+
+    # current time is 0
+    t = 0  
+
+    #path for robot to take
+    final_path = []  
+
+    #creates the risk map to be used as heuristic
     def create_risk_map(fire_map, q):
-
-        risk_map = np.zeros((d, d))  # Start with a grid of zeros
+        #initialize riskmap
+        risk_map = np.zeros((d, d))  
         fire_map_np = np.array(fire_map)
 
-        open_cells = (ship != 1) & (fire_map_np != -1)  # Safe spots (not walls, not fire)
-        blocked_cells = (ship == 1) | (fire_map_np == -1)  # Blocked spots (walls or fire)
+        # Define 2 arrays: Safe spots (no walls or fire) and Blocked spots (walls or fire)
+        open_cells = (ship != 1) & (fire_map_np != -1)  
+        blocked_cells = (ship == 1) | (fire_map_np == -1)  
 
-        risk_weight = 0.1  
-
+        # locations of fire
         fire_locations = [(r, c) for r in range(d) for c in range(d) if fire_map_np[r, c] == -1]
         if not fire_locations:
             return risk_map
 
+        # calculate risk map
         for r in range(d):
                 for c in range(d):
                     if open_cells[r, c]:
@@ -546,27 +555,9 @@ def bot4(info, fire_prog, q, visualize=False):
                                 min_dist = dist
                         if min_dist == 0:
                             min_dist = 0.01  # Avoid divide-by-zero
-                        risk_map[r, c] = risk_weight / min_dist 
+                        risk_map[r, c] = (.1 / min_dist )
 
-        else:  # Medium to high q: use current risk-averse approach
-
-            risk_weight = max(5 * (1 - q), 0.1)  # High risk weight
-            fire_locations = [(r, c) for r in range(d) for c in range(d) if fire_map_np[r, c] == -1]
-            if not fire_locations:
-                return risk_map
-
-            for r in range(d):
-                for c in range(d):
-                    if open_cells[r, c]:
-                        min_dist = float('inf')
-                        for fr, fc in fire_locations:
-                            dist = abs(r - fr) + abs(c - fc)
-                            if dist < min_dist:
-                                min_dist = dist
-                        if min_dist == 0:
-                            min_dist = 0.01  # Avoid divide-by-zero
-                        risk_map[r, c] = risk_weight / min_dist  # Higher risk if closer to fire
-
+        # define blocked cells are infinite danger
         for r in range(d):
             for c in range(d):
                 if blocked_cells[r, c]:
@@ -574,80 +565,101 @@ def bot4(info, fire_prog, q, visualize=False):
 
         return risk_map
 
-    def risk_aware_astar(start, map, button, q):
+
+    #modified A* to use our new heuristic
+    def astar_with_risk_heuristic(start, map, button, q):
         risk_map = create_risk_map(map, q)
 
         def heuristic(cell):
             r, c = cell
-            distance = abs(r - button[0]) + abs(c - button[1])  # Manhattan distance to button
-            if q < 0.3:  # Low q: prioritize distance more, risk less
-                risk_factor = 0.1  # Lower risk impact for longer, safer paths
+            distance = abs(r - button[0]) + abs(c - button[1]) 
+            if q < 0.3:  
+                risk_factor = 0.1 
             elif q<.7:
-                risk_factor = 0.2
-            else:  # High q: prioritize risk more
-                risk_factor = 1.0  # Higher risk impact for quick avoidance
-            return distance + risk_factor * risk_map[r, c]  # Balance distance and risk
+                risk_factor = 0.5
+            else: 
+                risk_factor = 1.0  
+            
+            # Balance distance and risk
+            return distance + risk_factor * risk_map[r, c]  
 
+
+        # initializing useful variables for A*
         fringe = []
-        heapq.heappush(fringe, (heuristic(start), start))  # Start with our position
-        total_costs = {start: 0}  # Steps to reach each spot (0 at start)
-        prev = {start: None}  # Tracks where we came from to build the path
-        visited = set()  # Spots we’ve already checked
+        heapq.heappush(fringe, (heuristic(start), start))  
+        total_costs = {start: 0}  
+        prev = {start: None}  
+        visited = set()  
 
+        # A* loop
         while fringe:
-            _, curr = heapq.heappop(fringe)  # Get the next spot with lowest score
+
+            cost, curr = heapq.heappop(fringe)  
+
+            #check if we visited current cell
             if curr in visited:
-                continue  # Skip if we’ve been here
-            visited.add(curr)  # Mark it as checked
-            if curr == button:  # We found the button!
-                path = []  # Build the path backward
+                continue 
+            visited.add(curr)  
+
+            #if goal we found path
+            if curr == button: 
+                path = []  
                 curr_p = curr
                 while curr_p:
-                    path.insert(0, curr_p)  # Add each step to the front
-                    curr_p = prev[curr_p]  # Go to the previous spot
+                    path.insert(0, curr_p) 
+                    curr_p = prev[curr_p]  
                 return path
 
-            r, c = curr  # Current row and column
-            # Try moving in all four directions
+            #if not, check neighbors of current cell
+            r, c = curr  
             for dr, dc in directions:
-                nr, nc = r + dr, c + dc  # New position after moving
-                # Check if it’s valid: in bounds, not a wall, not fire
-                if 0 <= nr < d and 0 <= nc < d and map[nr, nc] != 1 and map[nr, nc] != -1:
-                    child = (nr, nc)  # The new spot we’re looking at
-                    if child in visited:
-                        continue  # Skip if already checked
-                    cost = total_costs[curr] + 1  # One more step from here
-                    if child not in total_costs or cost < total_costs[child]:
-                        total_costs[child] = cost  # Update steps to reach this spot
-                        prev[child] = curr  # Remember we came from curr
-                        est_total_cost = cost + heuristic(child)  # Total score with guess
-                        heapq.heappush(fringe, (est_total_cost, child))  # Add to queue
-        return []  # No path found, we’re stuck
+                nr, nc = r + dr, c + dc  
 
-    # Main Loop: Bot’s Adventure
+                if 0 <= nr < d and 0 <= nc < d and map[nr, nc] != 1 and map[nr, nc] != -1:
+                    child = (nr, nc)  
+                    if child in visited:
+                        continue  
+                    cost = total_costs[curr] + 1
+                    if child not in total_costs or cost < total_costs[child]:
+                        total_costs[child] = cost 
+                        prev[child] = curr  
+                        est_total_cost = cost + heuristic(child)  
+                        #push to heap the cost of going to that node and its location
+                        heapq.heappush(fringe, (est_total_cost, child))
+        return []  
+
+    # create and try path. recalculate after every move. return failure of no path, or if button or bot is on fire
     while True:
-        path = risk_aware_astar(curr_pos, fire_prog[t], button, q)
+        #get path from current pos to button
+        path = astar_with_risk_heuristic(curr_pos, fire_prog[t], button, q)
+
         if visualize:
             visualize_ship(fire_prog[t], path, bot4=f"Adaptive Path t={t}, q={q}")
 
-        if not path:  # No path means we can’t get to the button
+        # No path means we can’t get to the button
+        if not path:  
             return "failure", final_path
 
-        curr_pos = path[1]  # Move to the next spot in the path
+        curr_pos = path[1]
         final_path.append(curr_pos)
-        r, c = curr_pos  # New row and column
-        if fire_prog[t, r, c] == -1:  # We stepped into fire—game over!
+        r, c = curr_pos  
+
+        # if bot on fire, we lose
+        if fire_prog[t, r, c] == -1:
             return "failure", final_path
 
-        br, bc = button  # Button’s position
-        if fire_prog[t, br, bc] == -1:  # Button’s burning, can’t press it
+        # if button on fire, we lose
+        br, bc = button  
+        if fire_prog[t, br, bc] == -1:  
             return "failure", final_path
 
-        if curr_pos == button:  # We reached the button—yay!
+        # win condition
+        if curr_pos == button: 
             return "success", final_path
 
-        t += 1  # Move to the next time step
-        if t >= len(fire_prog):  # Ran out of time, fire wins
+        t += 1  
+        # if we reach the end of fire_prog, the button is consumed, and we lost
+        if t >= len(fire_prog):  
             return "failure", final_path
 
 # Helpful testing function to visualize ship and path

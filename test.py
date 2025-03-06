@@ -20,7 +20,7 @@ bot_4_results_file = "bot_4_results.txt"
 winnable_frequency_file = "winnable_f.txt"
 
 # set the random seed
-random.seed(30) 
+random.seed(4) 
 
 # specify number ships to create
 num_ships = 20
