@@ -556,7 +556,7 @@ def bot4(info, fire_prog, q, visualize=False):
                         min_dist = min(min_dist, dist)
                     if min_dist == 0:
                         min_dist = 0.01  # Avoid divide-by-zero
-                    risk_map[r][c] = (.1 / min_dist )
+                    risk_map[r][c] = ( 10*(1-q)/ min_dist )
 
                 if ship[r][c] == 1 or fire_map[r][c] == -1:
                     risk_map[r][c] = float('inf')  # Can’t go here
@@ -575,15 +575,8 @@ def bot4(info, fire_prog, q, visualize=False):
         def heuristic(cell):
             r, c = cell
             distance = abs(r - button[0]) + abs(c - button[1]) 
-            if q < 0.3:  
-                risk_factor = 0.1 
-            elif q < 0.7:
-                risk_factor = 0.5
-            else: 
-                risk_factor = 1.0  
-            
             # Balance distance and risk
-            return distance + risk_factor * risk_map[r, c]  
+            return distance + risk_map[r, c]  
 
         # initializing useful variables for A*
         fringe = []
