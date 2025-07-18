@@ -24,7 +24,7 @@ This simulation is designed to analyze and compare the robustness of each bot ac
 - **Bot Algorithms**
   - **Bot 1**: A* pathfinder (ignores fire).
   - **Bot 2**: Re-plans at each step, avoids fire cells.
-  - **Bot 3**: Avoids fire + adjacent fire cells when re-planning.
+  - **Bot 3**: Avoids fire cells and fire-adjacent cells when re-planning.
   - **Bot 4**: Risk-aware A* using custom heuristic (distance + fire risk).
 
 - **Data Generation & Evaluation**
