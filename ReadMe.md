@@ -70,7 +70,7 @@ python plot.py
 
 ---
 
-## Detailed report
+## Detailed Report
 
 [Adaptive AI Navigation in Hazardous and Evolving Mazes.pdf](https://github.com/user-attachments/files/21323038/Adaptive.AI.Navigation.in.Hazardous.and.Evolving.Mazes.pdf)
 
