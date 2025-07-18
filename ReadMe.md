@@ -11,7 +11,12 @@ This simulation is designed to analyze and compare the robustness of each bot ac
 ## Features
 
 - **Maze Representation**  
-  2D grid with randomly placed walls, start point, button, and fire.
+  2D grid with randomly placed walls, start point, button, and fire. <br><br>
+  <img width="300" height="300" alt="image" src="https://github.com/user-attachments/assets/eacf150d-825e-4b5c-a3b0-970126c697ad" />
+  - 🟥: fire start cell
+  - 🟦: bot start cell
+  - 🟩: button cell (target/destination/goal)
+
 
 - **Fire Progression**  
   Uses a fixed 3D NumPy array to simulate consistent fire spread across experiments.
@@ -28,6 +33,13 @@ This simulation is designed to analyze and compare the robustness of each bot ac
 
 - **Visualization**
   - Matplotlib used for plotting bot success rates and overall maze winnability.
+  - Key Results:
+ 
+    <img width="400" height="400" alt="image" src="https://github.com/user-attachments/assets/a92b91b6-a629-4bfd-af76-bbd4c90fc0c5" />
+    &#8202; &#8202; &#8202; &#8202;
+    <img width="405" height="405" alt="image" src="https://github.com/user-attachments/assets/b243d486-2af6-4361-ba7f-1129bc4cde06" />
+
+
 
 ---
 
@@ -40,3 +52,25 @@ cd AI-Project-1
 
 # Install required dependencies
 pip install numpy matplotlib
+```
+
+## Usage
+
+Run all experiments and generate results:
+
+```bash
+python test.py
+```
+
+Generate visual plots for success rates and analysis:
+
+```bash
+python plot.py
+```
+
+---
+
+## Detailed report
+
+[Adaptive AI Navigation in Hazardous and Evolving Mazes.pdf](https://github.com/user-attachments/files/21323038/Adaptive.AI.Navigation.in.Hazardous.and.Evolving.Mazes.pdf)
+
