@@ -71,6 +71,6 @@ python plot.py
 ---
 
 ## Detailed Technical Report
-[Paper: Adaptive AI Navigation in Hazardous and Evolving Mazes](./Adaptive%20AI%20Navigation%20in%20Hazardous%20and%20Evolving%20Mazes.pdf)
 
+[Paper: Adaptive AI Navigation in Hazardous and Evolving Mazes](Adaptive_AI_Navigation_in_Hazardous_and_Evolving_Mazes.pdf)
 
