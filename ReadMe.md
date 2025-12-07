@@ -73,7 +73,7 @@ python plot.py
 ## Detailed Technical Report
 
 <a href="./Adaptive_AI_Navigation_in_Hazardous_and_Evolving_Mazes.pdf">
-  <img src="./paper.png" width="300">
+  <img src="./paper_1.png" width="300">
 </a>
 
 [Paper: Adaptive AI Navigation in Hazardous and Evolving Mazes](Adaptive_AI_Navigation_in_Hazardous_and_Evolving_Mazes.pdf)
